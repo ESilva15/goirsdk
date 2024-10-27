@@ -2,7 +2,10 @@ package main
 
 import (
 	"encoding/json"
+	"log"
+	"strings"
 
+	"golang.org/x/text/encoding/charmap"
 	"gopkg.in/yaml.v3"
 )
 
@@ -306,9 +309,23 @@ type Driver struct {
 
 // parseSessionInfo will parse the sessionInfo buffer into the SessionInfoYAML
 // struct
-func parseSessionInfo(data []byte) (*SessionInfoYAML, error) {
+func parseSessionInfo(buf []byte, len int32) (*SessionInfoYAML, error) {
+	// this seems not to work on windows
+	// windows := true
 	var sessionInfo SessionInfoYAML
-	err := yaml.Unmarshal(data, &sessionInfo)
+	dataBuffer := buf
+
+	// FOR WINDOWS
+	// if windows {
+	decoder := charmap.Windows1252.NewDecoder()
+	buf, err := decoder.Bytes(buf)
+	if err != nil {
+		log.Fatal(err)
+	}
+	dataBuffer = []byte(strings.TrimRight(string(buf[:len]), "\x00"))
+	// }
+
+	err = yaml.Unmarshal(dataBuffer, &sessionInfo)
 	if err != nil {
 		return nil, err
 	}

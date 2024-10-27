@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
 	"time"
 
 	"ibtReader/sharedMem"
@@ -62,6 +63,7 @@ func Init(f Reader) (*IBT, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Unable to read headers from file: %v", err)
 	}
+	fmt.Println(ibt.Headers.ToString())
 
 	// Read the disk sub headers
 	var subheaderRaw [SubHeaderSize]byte
@@ -73,6 +75,7 @@ func Init(f Reader) (*IBT, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Unable to parse disk subheaders from file: %v", err)
 	}
+	fmt.Println(ibt.SubHeaders.ToString())
 
 	// Read session info string
 	sessionInfoStringRaw := make([]byte, ibt.Headers.SessionInfoLength)
@@ -80,7 +83,7 @@ func Init(f Reader) (*IBT, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Failed to read sessionInfoString from file: %v", err)
 	}
-	ibt.SessionInfo, err = parseSessionInfo(sessionInfoStringRaw)
+	ibt.SessionInfo, err = parseSessionInfo(sessionInfoStringRaw, ibt.Headers.SessionInfoLength)
 	if err != nil {
 		return nil, fmt.Errorf("Unable to parse SessionInfoString from file: %v", err)
 	}
@@ -101,17 +104,18 @@ func msToKph(v float32) int {
 func main() {
 	fmt.Println("================== IBT FILE PARSER ==================")
 
-	// file, err := os.Open(ibtFile)
-	// if err != nil {
-	// 	log.Fatalf("Failed to open IBT file: %v", err)
-	// }
+	file, err := os.Open(ibtFile)
+	if err != nil {
+		log.Fatalf("Failed to open IBT file: %v", err)
+	}
 
-	ibt, err := Init(nil)
+	ibt, err := Init(file)
 	if err != nil {
 		log.Fatalf("Failed to create irsdk instance: %v", err)
 	}
 	fmt.Printf("%s\n", ibt.Headers.ToString())
 	fmt.Printf("%s\n", ibt.SubHeaders.ToString())
+	fmt.Printf("%s\n", ibt.SessionInfo.ToString())
 
 	// Display the human readable start date
 	unixStartDate := time.Unix(ibt.SubHeaders.StartDate, 0)
