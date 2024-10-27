@@ -1,4 +1,4 @@
-module esilvalabs.org/ibtReader
+module esilvalabs.org/ibtReader.git
 
 go 1.23.2
 
