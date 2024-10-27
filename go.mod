@@ -1,4 +1,4 @@
-module ESilvaLabs.org/ibtReader
+module esilvalabs.org/ibtReader
 
 go 1.23.2
 
