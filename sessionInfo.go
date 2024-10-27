@@ -307,18 +307,17 @@ type Driver struct {
 // parseSessionInfo will parse the sessionInfo buffer into the SessionInfoYAML
 // struct
 func parseSessionInfo(data []byte) (*SessionInfoYAML, error) {
-  var sessionInfo SessionInfoYAML
-  err := yaml.Unmarshal(data, &sessionInfo)
-  if err != nil {
-    return nil, err
-  }
+	var sessionInfo SessionInfoYAML
+	err := yaml.Unmarshal(data, &sessionInfo)
+	if err != nil {
+		return nil, err
+	}
 
-  return &sessionInfo, nil
+	return &sessionInfo, nil
 }
 
 // ToString will return a readable string of the struct
 func (s *SessionInfoYAML) ToString() string {
-  stringified, _ := json.MarshalIndent(s, "", "  ")
-  return string(stringified)
+	stringified, _ := json.MarshalIndent(s, "", "  ")
+	return string(stringified)
 }
-

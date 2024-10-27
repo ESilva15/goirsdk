@@ -13,30 +13,30 @@ const (
 
 // TelemetryHeaders struct to hold an IBT file's headers
 type TelemetryHeaders struct {
-	Version           int32
-  // Status of 1 indicates a completed session and status of 0 a live session
-	Status            int32
-  // TickRate indicates the frequency of writes (usually 60)
-	TickRate          int32
-  // SessionInfoUpdate indicates the number of times the SessionInfo was
-  // updated. 0 for finished sessions and >1 for active sessions
+	Version int32
+	// Status of 1 indicates a completed session and status of 0 a live session
+	Status int32
+	// TickRate indicates the frequency of writes (usually 60)
+	TickRate int32
+	// SessionInfoUpdate indicates the number of times the SessionInfo was
+	// updated. 0 for finished sessions and >1 for active sessions
 	SessionInfoUpdate int32
-  // SessionInfoLength is the length of the session info buffer
+	// SessionInfoLength is the length of the session info buffer
 	SessionInfoLength int32
-  // SessionInfoOffset is the offset of the session info in the buffer
+	// SessionInfoOffset is the offset of the session info in the buffer
 	SessionInfoOffset int32
-  // NumVars is the number of variables in each input
-	NumVars           int32
-  // VarHeaderOffset is the offset of the VarHeader
-	VarHeaderOffset   int32
+	// NumVars is the number of variables in each input
+	NumVars int32
+	// VarHeaderOffset is the offset of the VarHeader
+	VarHeaderOffset int32
 	// NumBuf will be 1 for static files and 3 for live telemetry files
 	NumBuf int32
-  // BufLen is the length for parsing VarHeader values
+	// BufLen is the length for parsing VarHeader values
 	BufLen int32
-  // Padding
-  Padding [12]byte
-  // I still don't know what this is:
-  BufOffset int32
+	// Padding
+	Padding [12]byte
+	// I still don't know what this is:
+	BufOffset int32
 }
 
 // ToString renders a string showing the values of the struct

@@ -4,14 +4,14 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"io"
 	"log"
+	"math"
 	"strings"
-  "math"
-  "io"
 )
 
 const (
-	VarSize        = 144
+	VarHeaderSize  = 144
 	IRSDK_char     = 0
 	IRSDK_bool     = 1
 	IRSDK_int      = 2
@@ -88,25 +88,23 @@ type TelemetryVars struct {
 	Vars        map[string]Var
 }
 
-func (i *IBT) readVariablerHeaders() {
+func (i *IBT) readVariablerHeaders() error {
 	i.Vars = &TelemetryVars{Vars: make(map[string]Var, i.Headers.NumVars)}
 
 	var k int32
 	for k = 0; k < i.Headers.NumVars; k++ {
-		rbuf := make([]byte, VarSize)
+		rbuf := make([]byte, VarHeaderSize)
 
-		_, err := i.File.ReadAt(rbuf, int64(i.Headers.VarHeaderOffset+k*VarSize))
+		_, err := i.File.ReadAt(rbuf, int64(i.Headers.VarHeaderOffset+k*VarHeaderSize))
 		if err != nil {
-			log.Fatal(err)
+      return err
 		}
 
 		var dst IBTVar
 		err = binary.Read(bytes.NewBuffer(rbuf[:]), binary.LittleEndian, &dst)
 		if err != nil {
-			log.Fatal(err)
+      return err
 		}
-
-    fmt.Println(dst.Name)
 
 		v := Var{
 			Type:        dst.Type,
@@ -121,13 +119,15 @@ func (i *IBT) readVariablerHeaders() {
 
 		i.Vars.Vars[v.Name] = v
 	}
+
+  return nil
 }
 
 func (i *IBT) readData() error {
-  // I think that we can add one extra check or verification here
-  // The file headers tells us how many data frames there are, we can probably
-  // cap it at that instead of waiting for the read to fail
-  // Probably wouldn't work on live data tho
+	// I think that we can add one extra check or verification here
+	// The file headers tells us how many data frames there are, we can probably
+	// cap it at that instead of waiting for the read to fail
+	// Probably wouldn't work on live data tho
 	start := i.Headers.BufOffset + i.Tick*i.Headers.BufLen
 	buf := make([]byte, i.Headers.BufLen)
 	_, err := i.File.ReadAt(buf, int64(start))

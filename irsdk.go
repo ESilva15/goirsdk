@@ -11,7 +11,6 @@ import (
 
 const (
 	ibtFile = "./telemetryFiles/mx5_2016Okayama_full_2024_10_19_22_02_12.ibt"
-	// ibtFile = "./telemetryFiles/sample.ibt"
 )
 
 // Reader is an interface to represent the readable data that can be either
@@ -45,7 +44,7 @@ func Init(f Reader) (*IBT, error) {
 	var headerRaw [FileHeaderSize]byte
 	_, err = ibt.File.ReadAt(headerRaw[:], 0)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to read from file: %v", err)
+		return nil, fmt.Errorf("Failed to read headers from file: %v", err)
 	}
 	ibt.Headers, err = parseTelemetryHeader(headerRaw)
 	if err != nil {
@@ -56,11 +55,11 @@ func Init(f Reader) (*IBT, error) {
 	var subheaderRaw [SubHeaderSize]byte
 	_, err = ibt.File.ReadAt(subheaderRaw[:], 112)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to read subheader from file: %v", err)
+		return nil, fmt.Errorf("Failed to read disk subheaders from file: %v", err)
 	}
 	ibt.SubHeaders, err = parseTelemetrySubHeader(subheaderRaw)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to parse subheaders from file: %v", err)
+		return nil, fmt.Errorf("Unable to parse disk subheaders from file: %v", err)
 	}
 
 	// Read session info string
@@ -71,11 +70,14 @@ func Init(f Reader) (*IBT, error) {
 	}
 	ibt.SessionInfo, err = parseSessionInfo(sessionInfoStringRaw)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to parse Session Info from file: %v", err)
+		return nil, fmt.Errorf("Unable to parse SessionInfoString from file: %v", err)
 	}
 
-  // Read the telemetry vars info
-	ibt.readVariablerHeaders()
+	// Read the telemetry vars info
+  err = ibt.readVariablerHeaders()
+  if err != nil {
+    return nil, fmt.Errorf("Unable to parser variable headers from file: %v", err)
+  }
 
 	return &ibt, nil
 }
@@ -96,19 +98,19 @@ func main() {
 	fmt.Printf("%s\n", ibt.Headers.ToString())
 	fmt.Printf("%s\n", ibt.SubHeaders.ToString())
 
-  // Display the human readable start date
-  unixStartDate := time.Unix(ibt.SubHeaders.StartDate, 0)
-  startDate := unixStartDate.Format("2006/01/02 15:04:05 -0700 MST")
+	// Display the human readable start date
+	unixStartDate := time.Unix(ibt.SubHeaders.StartDate, 0)
+	startDate := unixStartDate.Format("2006/01/02 15:04:05 -0700 MST")
 	fmt.Println("StartDate:", startDate)
 
-  // Display the human readable version of start time
-  unixStartTime := time.Unix(ibt.SubHeaders.StartDate + int64(ibt.SubHeaders.StartTime), 0)
-  startTime := unixStartTime.Format("2006/01/02 15:04:05 -0700 MST")
+	// Display the human readable version of start time
+	unixStartTime := time.Unix(ibt.SubHeaders.StartDate+int64(ibt.SubHeaders.StartTime), 0)
+	startTime := unixStartTime.Format("2006/01/02 15:04:05 -0700 MST")
 	fmt.Println("StartTime:", startTime)
 
-  // Display the human readable version of end time
-  unixEndTime := time.Unix(ibt.SubHeaders.StartDate + int64(ibt.SubHeaders.EndTime), 0)
-  endTime := unixEndTime.Format("2006/01/02 15:04:05 -0700 MST")
+	// Display the human readable version of end time
+	unixEndTime := time.Unix(ibt.SubHeaders.StartDate+int64(ibt.SubHeaders.EndTime), 0)
+	endTime := unixEndTime.Format("2006/01/02 15:04:05 -0700 MST")
 	fmt.Println("EndTime:  ", endTime)
 
 	last := time.Now().UnixMilli()
@@ -133,5 +135,5 @@ func main() {
 		}
 	}
 
-  fmt.Printf("%d\n", ibt.Tick)
+	fmt.Printf("%d\n", ibt.Tick)
 }

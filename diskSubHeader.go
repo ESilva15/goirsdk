@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	SubHeaderSize     = 32 // SubHeaderSize is the size of the subheader
+	SubHeaderSize = 32 // SubHeaderSize is the size of the subheader
 )
 
 // DiskSubHeader represents the IBT sub headers
@@ -23,7 +23,7 @@ type DiskSubHeader struct {
 // or nil if an error occurs. In which case the error return value is more
 // valuable
 func parseTelemetrySubHeader(buf [SubHeaderSize]byte) (*DiskSubHeader, error) {
-  dst := DiskSubHeader{}
+	dst := DiskSubHeader{}
 	err := binary.Read(bytes.NewBuffer(buf[:]), binary.LittleEndian, &dst)
 	if err != nil {
 		return nil, err
