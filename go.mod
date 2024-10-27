@@ -1,4 +1,4 @@
-module ibtReader
+module ESilvaLabs/ibtReader
 
 go 1.23.2
 
