@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	FileHeaderSize = 56 // FileHeaderSize is the size of the headers
+	FileHeaderSize = 112 // FileHeaderSize is the size of the headers
 	HeaderSize     = 4   // HeaderSize is the size of a single header
 )
 
@@ -42,17 +42,17 @@ type TelemetryHeaders struct {
 // ToString renders a string showing the values of the struct
 func (th *TelemetryHeaders) ToString() string {
 	return fmt.Sprintf(
-		"Version:         %5d (0x%04x)\n"+
-			"Status:          %5d (0x%04x)\n"+
-			"TickRate:        %5d (0x%04x)\n"+
-			"SIUpdate:        %5d (0x%04x)\n"+
-			"SILength:        %5d (0x%04x)\n"+
-			"SIOffset:        %5d (0x%04x)\n"+
-			"NumVars:         %5d (0x%04x)\n"+
-			"VarHeaderOffset: %5d (0x%04x)\n"+
-			"NumBuf:          %5d (0x%04x)\n"+
-			"BufLen:          %5d (0x%04x)\n"+
-			"BufOffset:       %5d (0x%04x)\n",
+		"Version:                               %5d (0x%04x)\n"+
+			"Status:                                %5d (0x%04x)\n"+
+			"TickRate:                              %5d (0x%04x)\n"+
+			"SIUpdate:                              %5d (0x%04x)\n"+
+			"SILength:                              %5d (0x%04x)\n"+
+			"SIOffset:                              %5d (0x%04x)\n"+
+			"NumVars:                               %5d (0x%04x)\n"+
+			"VarHeaderOffset:                       %5d (0x%04x)\n"+
+			"NumBuf:                                %5d (0x%04x)\n"+
+			"BufLen:                                %5d (0x%04x)\n"+
+			"BufOffset:                             %5d (0x%04x)\n",
 		th.Version, th.Version, th.Status, th.Status, th.TickRate, th.TickRate,
 		th.SessionInfoUpdate, th.SessionInfoUpdate,
 		th.SessionInfoLength, th.SessionInfoLength,

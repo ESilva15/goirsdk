@@ -1,7 +1,13 @@
 package main
 
 import (
+	"bytes"
+	"encoding/binary"
 	"fmt"
+	"log"
+	"strings"
+  "math"
+  "io"
 )
 
 const (
@@ -37,7 +43,7 @@ type IBTVar struct {
 	Offset      int32
 	Count       int32
 	CountAsTime bool
-	Padding     [0]byte
+	Padding     [3]byte
 	Name        [32]byte
 	Description [64]byte
 	Unit        [32]byte
@@ -51,11 +57,11 @@ type Var struct {
 	Name        string
 	Description string
 	Unit        string
-  // TODO
-  // Create an interface for this value
-  // Represent the IRSDK var types with a struct each that implements the Parse
-  // method or something like that I guess
-	Value       interface{}
+	// TODO
+	// Create an interface for this value
+	// Represent the IRSDK var types with a struct each that implements the Parse
+	// method or something like that I guess
+	Value interface{}
 }
 
 func (v *IBTVar) ToString() string {
@@ -82,86 +88,90 @@ type TelemetryVars struct {
 	Vars        map[string]Var
 }
 
-// func findLatestBuffer(i *IBT) varBuffer {
-// 	var vb varBuffer
-// 	foundTickCount := 0
-// 	for k := 0; k < int(i.Headers.NumBuf); k++ {
-// 		rbuf := make([]byte, 16)
-// 		_, err := i.File.ReadAt(rbuf, int64(48+k*16))
-// 		if err != nil {
-// 			log.Fatal(err)
-// 		}
-//
-// 		currentVb := varBuffer{
-// 			int(binary.LittleEndian.Uint32(rbuf[0:4])),
-// 			int(binary.LittleEndian.Uint32(rbuf[4:8])),
-// 		}
-//
-// 		if foundTickCount < currentVb.tickCount {
-// 			foundTickCount = currentVb.tickCount
-// 			vb = currentVb
-// 		}
-// 	}
-//
-//   return vb
-// }
+func (i *IBT) readVariablerHeaders() {
+	i.Vars = &TelemetryVars{Vars: make(map[string]Var, i.Headers.NumVars)}
 
-// func (i *IBT) parseVariableHeaders(offset int32) (int32, error) {
-//   if i.Vars.Vars == nil {
-//     i.Vars.Vars = make(map[string]*Variable, i.Headers.NumVars)
-//   }
-//
-//   var size int32 = 0
-// 	for k := range i.Headers.NumVars {
-// 		start := k * VarSize + offset
-//     size += start
-//
-// 		buf := make([]byte, VarSize)
-// 		_, err := i.File.ReadAt(buf, int64(start))
-// 		if err != nil {
-// 			return 0, err
-// 		}
-//
-// 		newVar, err := parseVariable(buf)
-// 		i.Vars.Vars[string(newVar.Name[:])] = newVar
-// 	}
-//
-//   return size, nil
-// }
+	var k int32
+	for k = 0; k < i.Headers.NumVars; k++ {
+		rbuf := make([]byte, VarSize)
 
-// This function will read a single variable
-// func parseVariable(buf []byte) (*Variable, error) {
-// 	if len(buf)%VarSize != 0 {
-// 		return nil, fmt.Errorf("buffer must be multiple of size: %d", VarSize)
-// 	}
-//
-// 	dst := Variable{}
-// 	err := binary.Read(bytes.NewBuffer(buf[:]), binary.LittleEndian, &dst)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-//
-// 	return &dst, nil
-// }
+		_, err := i.File.ReadAt(rbuf, int64(i.Headers.VarHeaderOffset+k*VarSize))
+		if err != nil {
+			log.Fatal(err)
+		}
 
-// this function will read the variables
-// func parseVariables(i *IBT) error {
-// 	i.parseVariableHeaders(0)
-//   vb := findLatestBuffer(i)
-//   fmt.Printf("%+v\n", vb)
-//   if i.Vars.LastVersion < vb.tickCount {
-//     // Then we have new data
-//     i.Vars.LastVersion = vb.tickCount
-//     i.LastValidData = time.Now().Unix()
-// 	  for _, v := range i.Vars.Vars {
-// 	  	// fmt.Printf("%s\n", v.ToString())
-//       rbuf := make([]byte, VarTypes[int(v.Type)].Size)
-//       _, err := i.File.ReadAt(rbuf, int64(vb.bufOffset + int(v.Offset)))
-//       if err != nil {
-//         log.Fatalf("Reading values: %v\n", err)
-//       }
-// 	  }
-//   }
-//
-// 	return nil
-// }
+		var dst IBTVar
+		err = binary.Read(bytes.NewBuffer(rbuf[:]), binary.LittleEndian, &dst)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+    fmt.Println(dst.Name)
+
+		v := Var{
+			Type:        dst.Type,
+			Offset:      dst.Offset,
+			Count:       dst.Count,
+			CountAsTime: dst.CountAsTime,
+			Name:        strings.TrimRight(string(dst.Name[:]), "\x00"),
+			Description: strings.TrimRight(string(dst.Description[:]), "\x00"),
+			Unit:        strings.TrimRight(string(dst.Unit[:]), "\x00"),
+			Value:       nil,
+		}
+
+		i.Vars.Vars[v.Name] = v
+	}
+}
+
+func (i *IBT) readData() error {
+  // I think that we can add one extra check or verification here
+  // The file headers tells us how many data frames there are, we can probably
+  // cap it at that instead of waiting for the read to fail
+  // Probably wouldn't work on live data tho
+	start := i.Headers.BufOffset + i.Tick*i.Headers.BufLen
+	buf := make([]byte, i.Headers.BufLen)
+	_, err := i.File.ReadAt(buf, int64(start))
+	if err != nil {
+		return err
+	}
+
+	for k, v := range i.Vars.Vars {
+		rbuf := buf[v.Offset : v.Offset+int32(VarTypes[int(v.Type)].Size)]
+
+		// Read the value
+		switch v.Type {
+		case IRSDK_char:
+			v.Value = string(rbuf[0])
+		case IRSDK_bool:
+			v.Value = int(rbuf[0]) > 0
+		case IRSDK_int:
+			v.Value = int(binary.LittleEndian.Uint32(rbuf))
+		case IRSDK_bitField:
+			v.Value = fmt.Sprintf("0x%x", int(binary.LittleEndian.Uint32(rbuf)))
+		case IRSDK_float:
+			v.Value = math.Float32frombits(uint32(binary.LittleEndian.Uint32(rbuf)))
+		case IRSDK_double:
+			v.Value = math.Float64frombits(uint64(binary.LittleEndian.Uint64(rbuf)))
+		}
+		// --------------
+
+		i.Vars.Vars[k] = v
+	}
+
+	i.Tick++
+
+	return nil
+}
+
+func (i *IBT) Update() bool {
+	err := i.readData()
+	if err != nil && err != io.EOF {
+		log.Fatalf("What happened?\n%v\n", err)
+	}
+
+	if err == io.EOF {
+		return false
+	}
+
+	return true
+}
