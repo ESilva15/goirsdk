@@ -1,4 +1,4 @@
-package ibtReader
+package main
 
 import (
 	"bytes"

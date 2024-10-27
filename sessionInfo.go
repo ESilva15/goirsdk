@@ -1,4 +1,4 @@
-package ibtReader
+package main
 
 import (
 	"encoding/json"

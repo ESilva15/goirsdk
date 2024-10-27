@@ -1,4 +1,4 @@
-package ibtReader
+package main
 
 import (
 	"bytes"
@@ -97,13 +97,13 @@ func (i *IBT) readVariablerHeaders() error {
 
 		_, err := i.File.ReadAt(rbuf, int64(i.Headers.VarHeaderOffset+k*VarHeaderSize))
 		if err != nil {
-      return err
+			return err
 		}
 
 		var dst IBTVar
 		err = binary.Read(bytes.NewBuffer(rbuf[:]), binary.LittleEndian, &dst)
 		if err != nil {
-      return err
+			return err
 		}
 
 		v := Var{
@@ -120,7 +120,7 @@ func (i *IBT) readVariablerHeaders() error {
 		i.Vars.Vars[v.Name] = v
 	}
 
-  return nil
+	return nil
 }
 
 func (i *IBT) readData() error {
