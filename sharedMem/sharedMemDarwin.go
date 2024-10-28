@@ -81,13 +81,13 @@ type shmi struct {
 	name   string
 	fd     C.int
 	v      unsafe.Pointer
-	size   int32
+	size   uint32
 	parent bool
 }
 
 // create shared memory. return shmi object.
 // name should not be more than 31 bytes.
-func create(name string, size int32) (*shmi, error) {
+func create(name string, size uint32) (*shmi, error) {
 	name = "/" + name
 
 	fd := C.Create(C.CString(name), C.int(size))
@@ -106,7 +106,7 @@ func create(name string, size int32) (*shmi, error) {
 
 // open shared memory. return shmi object.
 // name should not be more than 31 bytes.
-func open(name string, size int32) (*shmi, error) {
+func open(name string, size uint32) (*shmi, error) {
 	name = "/" + name
 
 	fd := C.Open(C.CString(name), C.int(size))

@@ -51,6 +51,9 @@ func Init(f Reader) (*IBT, error) {
 			return nil, fmt.Errorf("Failed to open memory mapped file: %v", err)
 		}
 		ibt.LiveData = true
+
+    // Here we also need to open the broadcast message thing and the 
+    // thing to check if the game is open
 	}
 
 	// Read the file headers
