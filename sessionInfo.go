@@ -333,6 +333,11 @@ func parseSessionInfo(buf []byte, len int32) (*SessionInfoYAML, error) {
 	return &sessionInfo, nil
 }
 
+// sessionStatusOK will tell us if we are connected to the live data
+func sessionStatusOK(status int) bool {
+	return (status & stConnected) > 0
+}
+
 // ToString will return a readable string of the struct
 func (s *SessionInfoYAML) ToString() string {
 	stringified, _ := json.MarshalIndent(s, "", "  ")

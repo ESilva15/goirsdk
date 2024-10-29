@@ -8,16 +8,22 @@ import (
 	"log"
 	"math"
 	"strings"
+	"time"
 )
 
 const (
-	VarHeaderSize  = 144
-	IRSDK_char     = 0
-	IRSDK_bool     = 1
-	IRSDK_int      = 2
-	IRSDK_bitField = 3
-	IRSDK_float    = 4
-	IRSDK_double   = 5
+	VarHeaderSize               = 144
+	IRSDK_char                  = 0
+	IRSDK_bool                  = 1
+	IRSDK_int                   = 2
+	IRSDK_bitField              = 3
+	IRSDK_float                 = 4
+	IRSDK_double                = 5
+	Running        IRacingState = iota
+	Paused
+	Ended
+	Failed
+	Unknown
 )
 
 // I think I can make an interface if IRSDK types with available types and
@@ -33,6 +39,7 @@ var (
 	}
 )
 
+type IRacingState int
 type VarType struct {
 	Size int    // Size is the var type size in bytes
 	Name string // Name is the irsdk var name
@@ -79,13 +86,13 @@ func (v *IBTVar) ToString() string {
 }
 
 type varBuffer struct {
-	tickCount int
-	bufOffset int
+	TickCount int32
+	BufOffset int32
 }
 
 type TelemetryVars struct {
-	LastVersion int
-	Vars        map[string]Var
+	Tick int32
+	Vars map[string]Var
 }
 
 func (i *IBT) readVariablerHeaders() error {
@@ -123,19 +130,9 @@ func (i *IBT) readVariablerHeaders() error {
 	return nil
 }
 
-func (i *IBT) readData() error {
-	// I think that we can add one extra check or verification here
-	// The file headers tells us how many data frames there are, we can probably
-	// cap it at that instead of waiting for the read to fail
-	// Probably wouldn't work on live data tho
-	start := i.Headers.BufOffset + i.Tick*i.Headers.BufLen
-	buf := make([]byte, i.Headers.BufLen)
-	_, err := i.File.ReadAt(buf, int64(start))
-	if err != nil {
-		return err
-	}
-
+func (i *IBT) readData(buf []byte) error {
 	for k, v := range i.Vars.Vars {
+		// Slice of the variable value in the buffer
 		rbuf := buf[v.Offset : v.Offset+int32(VarTypes[int(v.Type)].Size)]
 
 		// Read the value
@@ -158,20 +155,77 @@ func (i *IBT) readData() error {
 		i.Vars.Vars[k] = v
 	}
 
-	i.Tick++
-
 	return nil
 }
 
-func (i *IBT) Update() bool {
-	err := i.readData()
-	if err != nil && err != io.EOF {
-		log.Fatalf("What happened?\n%v\n", err)
+func (i *IBT) Update(timeout time.Duration) (IRacingState, error) {
+	if i.winUtils != nil {
+		// Put a way to check if the sim is active here
+		// fmt.Println("NOT CHECKING IF SIM IS ACTIVE - ADD ME")
+
+		// WORKING HERE
+		// Need to figure out how to grab the latest buffer with data
+		var vb varBuffer
+		foundTickCount := 0
+		for k := 0; k < int(i.Headers.NumBuf); k++ {
+			rbuf := make([]byte, 16)
+			// Read 16 bytes, I don't know why, but do need to understand this
+			_, err := i.File.ReadAt(rbuf, int64(48+k*16))
+			if err != nil {
+				return Failed, err
+			}
+
+			var curVb varBuffer
+			err = binary.Read(bytes.NewBuffer(rbuf[:]), binary.LittleEndian, &curVb)
+			if err != nil {
+				return Failed, err
+			}
+
+			if foundTickCount < int(curVb.TickCount) {
+				foundTickCount = int(curVb.TickCount)
+				vb = curVb
+			}
+		}
+
+		i.Vars.Tick = vb.TickCount
+
+		start := vb.BufOffset
+		buf := make([]byte, i.Headers.BufLen)
+
+		_, err := i.File.ReadAt(buf, int64(start))
+		if err != nil {
+			return Failed, err
+		}
+
+		err = i.readData(buf)
+		if err != nil && err != io.EOF {
+			return Unknown, err
+		}
+
+		if err == io.EOF {
+			return Ended, nil
+		}
+	} else {
+		// This will get the dataframe corresponding to a give tick
+		start := i.Headers.BufOffset + i.Vars.Tick*i.Headers.BufLen
+		buf := make([]byte, i.Headers.BufLen)
+		_, err := i.File.ReadAt(buf, int64(start))
+		if err != nil {
+			return Unknown, err
+		}
+
+		err = i.readData(buf)
+		if err != nil && err != io.EOF {
+			log.Fatalf("What happened?\n%v\n", err)
+		}
+
+		if err == io.EOF {
+			return Ended, nil
+		}
+
+		// This was previously in the read data method, but it probably fits here better
+		i.Vars.Tick++
 	}
 
-	if err == io.EOF {
-		return false
-	}
-
-	return true
+	return Running, nil
 }

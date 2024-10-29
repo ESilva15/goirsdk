@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"ibtReader/utils"
 )
 
 const (
@@ -24,7 +23,7 @@ type DiskSubHeader struct {
 // or nil if an error occurs. In which case the error return value is more
 // valuable
 func parseTelemetrySubHeader(buf [SubHeaderSize]byte) (*DiskSubHeader, error) {
-	utils.HexDump(buf[:])
+	// utils.HexDump(buf[:])
 
 	dst := DiskSubHeader{}
 	err := binary.Read(bytes.NewBuffer(buf[:]), binary.LittleEndian, &dst)

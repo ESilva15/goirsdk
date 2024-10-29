@@ -66,6 +66,9 @@ func (th *TelemetryHeaders) ToString() string {
 // buffer.
 // You need to pass a the first FILE_HEADER_SIZE bytes of the buffer
 func parseTelemetryHeader(buf [FileHeaderSize]byte) (*TelemetryHeaders, error) {
+	// utils.HexDump(buf[:])
+	// fmt.Printf("Len: %d\n", len(buf))
+
 	if len(buf)%HeaderSize != 0 {
 		return nil, fmt.Errorf("buffer must be multiple of size: %d", HeaderSize)
 	}
