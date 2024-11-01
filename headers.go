@@ -69,10 +69,6 @@ func parseTelemetryHeader(buf [FileHeaderSize]byte) (*TelemetryHeaders, error) {
 	// utils.HexDump(buf[:])
 	// fmt.Printf("Len: %d\n", len(buf))
 
-	if len(buf)%HeaderSize != 0 {
-		return nil, fmt.Errorf("buffer must be multiple of size: %d", HeaderSize)
-	}
-
 	dst := TelemetryHeaders{}
 	err := binary.Read(bytes.NewBuffer(buf[:]), binary.LittleEndian, &dst)
 	if err != nil {
