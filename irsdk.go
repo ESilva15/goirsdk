@@ -3,10 +3,12 @@ package main
 
 import (
 	"fmt"
+  "os"
 	"io"
 	"log"
 	"time"
 
+  conv "ibtReader/conversions"
 	"ibtReader/winutils"
 )
 
@@ -133,19 +135,15 @@ func (i *IBT) Close() {
 	}
 }
 
-func msToKph(v float32) int {
-	return int((3600 * v) / 1000)
-}
-
 func main() {
 	fmt.Println("================== IBT FILE PARSER ==================")
 
-	// file, err := os.Open(ibtFile)
-	// if err != nil {
-	// 	log.Fatalf("Failed to open IBT file: %v", err)
-	// }
+	file, err := os.Open(ibtFile)
+	if err != nil {
+		log.Fatalf("Failed to open IBT file: %v", err)
+	}
 
-	ibt, err := Init(nil)
+	ibt, err := Init(file)
 	if err != nil {
 		log.Fatalf("Failed to create irsdk instance: %v", err)
 	}
@@ -187,7 +185,7 @@ func main() {
 		if curTime-last > 250 {
 			fmt.Printf("                                                           \r")
 			if val, ok := ibt.Vars.Vars["Speed"]; ok {
-				fmt.Printf("\r%d %d", ibt.Vars.Tick/60, msToKph(val.Value.(float32)))
+				fmt.Printf("\r%d %d", ibt.Vars.Tick/60, conv.MsToKph(val.Value.(float32)))
 			} else {
 				fmt.Printf("\r%d %s", ibt.Vars.Tick/60, "KEY DOESN'T EXIST")
 			}
