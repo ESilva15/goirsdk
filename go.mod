@@ -1,4 +1,4 @@
-module ibtReader
+module github.com/ESilva15/goirsdk
 
 go 1.23.2
 

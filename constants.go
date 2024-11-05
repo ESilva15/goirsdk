@@ -1,4 +1,4 @@
-package main
+package goirsdk
 
 type Msg struct {
 	Cmd int

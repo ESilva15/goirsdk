@@ -1,15 +1,15 @@
-// Package IbtReader is all you need for you iRacing telemetry parsing
-package main
+// Package goirsdk is all you need for you iRacing telemetry parsing
+package goirsdk
 
 import (
 	"fmt"
-  "os"
+  // "os"
 	"io"
-	"log"
-	"time"
+	// "log"
+	// "time"
 
-  conv "ibtReader/conversions"
-	"ibtReader/winutils"
+  // conv "ibtReader/conversions"
+	"github.com/ESilva15/goirsdk/winutils"
 )
 
 const (
@@ -135,68 +135,68 @@ func (i *IBT) Close() {
 	}
 }
 
-func main() {
-	fmt.Println("================== IBT FILE PARSER ==================")
-
-	file, err := os.Open(ibtFile)
-	if err != nil {
-		log.Fatalf("Failed to open IBT file: %v", err)
-	}
-
-	ibt, err := Init(file)
-	if err != nil {
-		log.Fatalf("Failed to create irsdk instance: %v", err)
-	}
-	// fmt.Printf("%s\n", ibt.Headers.ToString())
-	// fmt.Printf("%s\n", ibt.SubHeaders.ToString())
-	// fmt.Printf("%s\n", ibt.SessionInfo.ToString())
-
-	// Display the human readable start date
-	// unixStartDate := time.Unix(ibt.SubHeaders.StartDate, 0)
-	// startDate := unixStartDate.Format("2006/01/02 15:04:05 -0700 MST")
-	// fmt.Println("StartDate:", startDate)
-
-	// Display the human readable version of start time
-	// unixStartTime := time.Unix(ibt.SubHeaders.StartDate+int64(ibt.SubHeaders.StartTime), 0)
-	// startTime := unixStartTime.Format("2006/01/02 15:04:05 -0700 MST")
-	// fmt.Println("StartTime:", startTime)
-
-	// Display the human readable version of end time
-	// unixEndTime := time.Unix(ibt.SubHeaders.StartDate+int64(ibt.SubHeaders.EndTime), 0)
-	// endTime := unixEndTime.Format("2006/01/02 15:04:05 -0700 MST")
-	// fmt.Println("EndTime:  ", endTime)
-
-	last := time.Now().UnixMilli()
-	for {
-		time.Sleep(time.Second / 60)
-		res, err := ibt.Update(100 * time.Millisecond)
-		if res == Unknown {
-			log.Fatalf("Some unknown error occurred: %v\n", err)
-		}
-
-		if res == Paused {
-			fmt.Printf("\r                                                                    \r")
-			fmt.Println("GAME IS PAUSED")
-			continue
-		}
-
-		curTime := time.Now().UnixMilli()
-
-		if curTime-last > 250 {
-			fmt.Printf("                                                           \r")
-			if val, ok := ibt.Vars.Vars["Speed"]; ok {
-				fmt.Printf("\r%d %d", ibt.Vars.Tick/60, conv.MsToKph(val.Value.(float32)))
-			} else {
-				fmt.Printf("\r%d %s", ibt.Vars.Tick/60, "KEY DOESN'T EXIST")
-			}
-		}
-
-		if res == Ended {
-			fmt.Println("\nEnd of file found...")
-			break
-		}
-	}
-	fmt.Printf("%d\n", ibt.Vars.Tick)
-
-	ibt.Close()
-}
+// func main() {
+// 	fmt.Println("================== IBT FILE PARSER ==================")
+//
+// 	file, err := os.Open(ibtFile)
+// 	if err != nil {
+// 		log.Fatalf("Failed to open IBT file: %v", err)
+// 	}
+//
+// 	ibt, err := Init(file)
+// 	if err != nil {
+// 		log.Fatalf("Failed to create irsdk instance: %v", err)
+// 	}
+// 	// fmt.Printf("%s\n", ibt.Headers.ToString())
+// 	// fmt.Printf("%s\n", ibt.SubHeaders.ToString())
+// 	// fmt.Printf("%s\n", ibt.SessionInfo.ToString())
+//
+// 	// Display the human readable start date
+// 	// unixStartDate := time.Unix(ibt.SubHeaders.StartDate, 0)
+// 	// startDate := unixStartDate.Format("2006/01/02 15:04:05 -0700 MST")
+// 	// fmt.Println("StartDate:", startDate)
+//
+// 	// Display the human readable version of start time
+// 	// unixStartTime := time.Unix(ibt.SubHeaders.StartDate+int64(ibt.SubHeaders.StartTime), 0)
+// 	// startTime := unixStartTime.Format("2006/01/02 15:04:05 -0700 MST")
+// 	// fmt.Println("StartTime:", startTime)
+//
+// 	// Display the human readable version of end time
+// 	// unixEndTime := time.Unix(ibt.SubHeaders.StartDate+int64(ibt.SubHeaders.EndTime), 0)
+// 	// endTime := unixEndTime.Format("2006/01/02 15:04:05 -0700 MST")
+// 	// fmt.Println("EndTime:  ", endTime)
+//
+// 	last := time.Now().UnixMilli()
+// 	for {
+// 		time.Sleep(time.Second / 60)
+// 		res, err := ibt.Update(100 * time.Millisecond)
+// 		if res == Unknown {
+// 			log.Fatalf("Some unknown error occurred: %v\n", err)
+// 		}
+//
+// 		if res == Paused {
+// 			fmt.Printf("\r                                                                    \r")
+// 			fmt.Println("GAME IS PAUSED")
+// 			continue
+// 		}
+//
+// 		curTime := time.Now().UnixMilli()
+//
+// 		if curTime-last > 250 {
+// 			fmt.Printf("                                                           \r")
+// 			if val, ok := ibt.Vars.Vars["Speed"]; ok {
+// 				fmt.Printf("\r%d %d", ibt.Vars.Tick/60, conv.MsToKph(val.Value.(float32)))
+// 			} else {
+// 				fmt.Printf("\r%d %s", ibt.Vars.Tick/60, "KEY DOESN'T EXIST")
+// 			}
+// 		}
+//
+// 		if res == Ended {
+// 			fmt.Println("\nEnd of file found...")
+// 			break
+// 		}
+// 	}
+// 	fmt.Printf("%d\n", ibt.Vars.Tick)
+//
+// 	ibt.Close()
+// }

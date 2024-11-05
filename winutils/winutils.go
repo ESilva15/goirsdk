@@ -5,7 +5,7 @@
 package winutils
 
 import (
-	"ibtReader/sharedMem"
+	"github.com/ESilva15/goirsdk/sharedMem"
 	"io"
 	"time"
 )
