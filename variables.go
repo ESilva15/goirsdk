@@ -1,4 +1,4 @@
-package main
+package goirsdk
 
 import (
 	"bytes"
@@ -210,6 +210,9 @@ func (i *IBT) Update(timeout time.Duration) (IRacingState, error) {
 		start := i.Headers.BufOffset + i.Vars.Tick*i.Headers.BufLen
 		buf := make([]byte, i.Headers.BufLen)
 		_, err := i.File.ReadAt(buf, int64(start))
+		if err == io.EOF {
+			return Ended, nil
+		}
 		if err != nil {
 			return Unknown, err
 		}
@@ -217,10 +220,6 @@ func (i *IBT) Update(timeout time.Duration) (IRacingState, error) {
 		err = i.readData(buf)
 		if err != nil && err != io.EOF {
 			log.Fatalf("What happened?\n%v\n", err)
-		}
-
-		if err == io.EOF {
-			return Ended, nil
 		}
 
 		// This was previously in the read data method, but it probably fits here better
