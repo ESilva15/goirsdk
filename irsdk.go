@@ -3,12 +3,14 @@ package goirsdk
 
 import (
 	"fmt"
-  // "os"
+	"log"
+	"os"
+	// "os"
 	"io"
 	// "log"
 	// "time"
 
-  // conv "ibtReader/conversions"
+	// conv "ibtReader/conversions"
 	"github.com/ESilva15/goirsdk/winutils"
 )
 
@@ -26,12 +28,13 @@ type Reader interface {
 
 // IBT struct will hold the relevant data for a given IBT file
 type IBT struct {
-	File        Reader                    // Source of the data
-	Headers     *TelemetryHeaders         // IBT file Headers
-	SubHeaders  *DiskSubHeader            // IBT file Sub Headers
-	SessionInfo *SessionInfoYAML          // IBT file Session Info
-	Vars        *TelemetryVars            // Vars will hold the telemetry data
-	winUtils    *winutils.IRacingWinUtils // WinUtils gives access to the system utilities
+	File         Reader                    // Source of the data
+	FileToExport string                    // If set, it will export the IBT data to the file
+	Headers      *TelemetryHeaders         // IBT file Headers
+	SubHeaders   *DiskSubHeader            // IBT file Sub Headers
+	SessionInfo  *SessionInfoYAML          // IBT file Session Info
+	Vars         *TelemetryVars            // Vars will hold the telemetry data
+	winUtils     *winutils.IRacingWinUtils // WinUtils gives access to the system utilities
 }
 
 func (i *IBT) IsConnected() bool {
@@ -45,6 +48,20 @@ func (i *IBT) IsConnected() bool {
 	}
 
 	return false
+}
+
+func (i *IBT) ExportToIBT(filepath string) {
+	rbuf := make([]byte, fileMapSize)
+
+	_, err := i.File.ReadAt(rbuf, 0)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = os.WriteFile(filepath, rbuf, 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 // Init serves to initialize and get a hold of a IBT struct

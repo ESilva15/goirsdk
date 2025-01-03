@@ -226,5 +226,11 @@ func (i *IBT) Update(timeout time.Duration) (IRacingState, error) {
 		i.Vars.Tick++
 	}
 
+	// Make this happen in a different thread, or have this send to a queue that has a thread
+	// writing to a file
+	if i.FileToExport != "" {
+		i.ExportToIBT(i.FileToExport)
+	}
+
 	return Running, nil
 }
