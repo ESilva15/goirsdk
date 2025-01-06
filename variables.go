@@ -91,8 +91,9 @@ type varBuffer struct {
 }
 
 type TelemetryVars struct {
-	Tick int32
-	Vars map[string]Var
+	Tick         int32          // Keeps track of the current data buffer tick
+	RecorderTick int32          // Counts from 0 when creating a telemetry file from a replay or live data
+	Vars         map[string]Var // Variables content
 }
 
 func (i *IBT) readVariablerHeaders() error {
@@ -106,6 +107,12 @@ func (i *IBT) readVariablerHeaders() error {
 		if err != nil {
 			return err
 		}
+
+		_, err = i.FileToExport.WriteAt(rbuf, int64(i.Headers.VarHeaderOffset+k*VarHeaderSize))
+		if err != nil {
+			log.Fatal(err)
+		}
+		i.FileToExport.Sync()
 
 		var dst IBTVar
 		err = binary.Read(bytes.NewBuffer(rbuf[:]), binary.LittleEndian, &dst)
@@ -197,6 +204,11 @@ func (i *IBT) Update(timeout time.Duration) (IRacingState, error) {
 			return Failed, err
 		}
 
+		_, err = i.FileToExport.WriteAt(buf, int64(i.Headers.BufOffset+i.Vars.RecorderTick*i.Headers.BufLen))
+		if err != nil {
+			log.Fatalf("Failed to write to file [2]: %v", err)
+		}
+
 		err = i.readData(buf)
 		if err != nil && err != io.EOF {
 			return Unknown, err
@@ -205,11 +217,21 @@ func (i *IBT) Update(timeout time.Duration) (IRacingState, error) {
 		if err == io.EOF {
 			return Ended, nil
 		}
+
+		i.Vars.RecorderTick++
 	} else {
-		// This will get the dataframe corresponding to a give tick
+		// This will get the dataframe corresponding to a given tick
 		start := i.Headers.BufOffset + i.Vars.Tick*i.Headers.BufLen
 		buf := make([]byte, i.Headers.BufLen)
 		_, err := i.File.ReadAt(buf, int64(start))
+
+		// Make this happen in a different thread, or have this send to a queue that has a thread
+		// writing to a file
+		_, err = i.FileToExport.WriteAt(buf, int64(start))
+		if err != nil {
+			log.Fatalf("Failed to write to file [1]: %v\n", err)
+		}
+
 		if err == io.EOF {
 			return Ended, nil
 		}
@@ -224,12 +246,6 @@ func (i *IBT) Update(timeout time.Duration) (IRacingState, error) {
 
 		// This was previously in the read data method, but it probably fits here better
 		i.Vars.Tick++
-	}
-
-	// Make this happen in a different thread, or have this send to a queue that has a thread
-	// writing to a file
-	if i.FileToExport != "" {
-		i.ExportToIBT(i.FileToExport)
 	}
 
 	return Running, nil

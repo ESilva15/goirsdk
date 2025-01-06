@@ -5,18 +5,19 @@ import (
 	"fmt"
 	"log"
 	"os"
-	// "os"
-	"io"
-	// "log"
-	// "time"
 
-	// conv "ibtReader/conversions"
+	"io"
+
 	"github.com/ESilva15/goirsdk/winutils"
 )
 
 const (
 	ibtFile = "./telemetryFiles/mx5_2016Okayama_full_2024_10_19_22_02_12.ibt"
 )
+
+func msToKph(v float32) int {
+	return int((3600 * v) / 1000)
+}
 
 // Reader is an interface to represent the readable data that can be either
 // a .ibt file (or live data, hopefully)
@@ -29,7 +30,8 @@ type Reader interface {
 // IBT struct will hold the relevant data for a given IBT file
 type IBT struct {
 	File         Reader                    // Source of the data
-	FileToExport string                    // If set, it will export the IBT data to the file
+	FileToExport *os.File                  // If set, it will export the IBT data to the file
+	YAMLExport   *os.File                  // If set, it will export the session YAML to the file
 	Headers      *TelemetryHeaders         // IBT file Headers
 	SubHeaders   *DiskSubHeader            // IBT file Sub Headers
 	SessionInfo  *SessionInfoYAML          // IBT file Session Info
@@ -50,7 +52,7 @@ func (i *IBT) IsConnected() bool {
 	return false
 }
 
-func (i *IBT) ExportToIBT(filepath string) {
+func (i *IBT) ExportToIBT() {
 	rbuf := make([]byte, fileMapSize)
 
 	_, err := i.File.ReadAt(rbuf, 0)
@@ -58,20 +60,36 @@ func (i *IBT) ExportToIBT(filepath string) {
 		log.Fatal(err)
 	}
 
-	err = os.WriteFile(filepath, rbuf, 0644)
+	_, err = i.FileToExport.Write(rbuf)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
 // Init serves to initialize and get a hold of a IBT struct
-func Init(f Reader) (*IBT, error) {
+func Init(f Reader, exportTelem string, exportYAML string) (*IBT, error) {
 	// Read the header of the file
 	var err error
 	ibt := IBT{
-		File:     f,
-		Vars:     &TelemetryVars{},
-		winUtils: nil,
+		File:         f,
+		FileToExport: nil,
+		YAMLExport:   nil,
+		Vars:         &TelemetryVars{},
+		winUtils:     nil,
+	}
+
+	// If requested to output to a telemetry file
+	if exportTelem != "" {
+		ibt.FileToExport, err = os.OpenFile(exportTelem, os.O_CREATE|os.O_RDWR, 0644)
+		if err != nil {
+			return nil, err
+		}
+		ibt.FileToExport.Sync()
+	}
+
+	// Do the same for the YAMLExport
+	if exportYAML != "" {
+		// Do the thing here, yo
 	}
 
 	if ibt.File == nil {
@@ -112,16 +130,26 @@ func Init(f Reader) (*IBT, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Unable to read headers from file: %v", err)
 	}
+	// Write to the output file
+	_, err = ibt.FileToExport.WriteAt(headerRaw[:], 0)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Read the disk sub headers
 	var subheaderRaw [SubHeaderSize]byte
-	_, err = ibt.File.ReadAt(subheaderRaw[:], 112)
+	_, err = ibt.File.ReadAt(subheaderRaw[:], HeaderSize)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to read disk subheaders from file: %v", err)
 	}
 	ibt.SubHeaders, err = parseTelemetrySubHeader(subheaderRaw)
 	if err != nil {
 		return nil, fmt.Errorf("Unable to parse disk subheaders from file: %v", err)
+	}
+	// Write to the output file
+	_, err = ibt.FileToExport.WriteAt(subheaderRaw[:], HeaderSize)
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	// Read session info string
@@ -130,6 +158,12 @@ func Init(f Reader) (*IBT, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Failed to read sessionInfoString from file: %v", err)
 	}
+	// Write to the output file
+	_, err = ibt.FileToExport.WriteAt(sessionInfoStringRaw[:], int64(ibt.Headers.SessionInfoOffset))
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	ibt.SessionInfo, err = parseSessionInfo(sessionInfoStringRaw, ibt.Headers.SessionInfoLength)
 	if err != nil {
 		return nil, fmt.Errorf("Unable to parse SessionInfoString from file: %v", err)
@@ -151,69 +185,3 @@ func (i *IBT) Close() {
 		i.winUtils.Close()
 	}
 }
-
-// func main() {
-// 	fmt.Println("================== IBT FILE PARSER ==================")
-//
-// 	file, err := os.Open(ibtFile)
-// 	if err != nil {
-// 		log.Fatalf("Failed to open IBT file: %v", err)
-// 	}
-//
-// 	ibt, err := Init(file)
-// 	if err != nil {
-// 		log.Fatalf("Failed to create irsdk instance: %v", err)
-// 	}
-// 	// fmt.Printf("%s\n", ibt.Headers.ToString())
-// 	// fmt.Printf("%s\n", ibt.SubHeaders.ToString())
-// 	// fmt.Printf("%s\n", ibt.SessionInfo.ToString())
-//
-// 	// Display the human readable start date
-// 	// unixStartDate := time.Unix(ibt.SubHeaders.StartDate, 0)
-// 	// startDate := unixStartDate.Format("2006/01/02 15:04:05 -0700 MST")
-// 	// fmt.Println("StartDate:", startDate)
-//
-// 	// Display the human readable version of start time
-// 	// unixStartTime := time.Unix(ibt.SubHeaders.StartDate+int64(ibt.SubHeaders.StartTime), 0)
-// 	// startTime := unixStartTime.Format("2006/01/02 15:04:05 -0700 MST")
-// 	// fmt.Println("StartTime:", startTime)
-//
-// 	// Display the human readable version of end time
-// 	// unixEndTime := time.Unix(ibt.SubHeaders.StartDate+int64(ibt.SubHeaders.EndTime), 0)
-// 	// endTime := unixEndTime.Format("2006/01/02 15:04:05 -0700 MST")
-// 	// fmt.Println("EndTime:  ", endTime)
-//
-// 	last := time.Now().UnixMilli()
-// 	for {
-// 		time.Sleep(time.Second / 60)
-// 		res, err := ibt.Update(100 * time.Millisecond)
-// 		if res == Unknown {
-// 			log.Fatalf("Some unknown error occurred: %v\n", err)
-// 		}
-//
-// 		if res == Paused {
-// 			fmt.Printf("\r                                                                    \r")
-// 			fmt.Println("GAME IS PAUSED")
-// 			continue
-// 		}
-//
-// 		curTime := time.Now().UnixMilli()
-//
-// 		if curTime-last > 250 {
-// 			fmt.Printf("                                                           \r")
-// 			if val, ok := ibt.Vars.Vars["Speed"]; ok {
-// 				fmt.Printf("\r%d %d", ibt.Vars.Tick/60, conv.MsToKph(val.Value.(float32)))
-// 			} else {
-// 				fmt.Printf("\r%d %s", ibt.Vars.Tick/60, "KEY DOESN'T EXIST")
-// 			}
-// 		}
-//
-// 		if res == Ended {
-// 			fmt.Println("\nEnd of file found...")
-// 			break
-// 		}
-// 	}
-// 	fmt.Printf("%d\n", ibt.Vars.Tick)
-//
-// 	ibt.Close()
-// }
