@@ -161,14 +161,13 @@ func Init(f Reader, exportTelem string, exportYAML string) (*IBT, error) {
 		log.Fatal(err)
 	}
 
-	// Write to YAML output file
-	if exportYAML != "" {
-		ibt.exportYAML(exportYAML)
-	}
-
 	ibt.SessionInfo, err = parseSessionInfo(sessionInfoStringRaw, ibt.Headers.SessionInfoLength)
 	if err != nil {
 		return nil, fmt.Errorf("Unable to parse SessionInfoString from file: %v", err)
+	}
+	// Write to YAML output file
+	if exportYAML != "" {
+		ibt.exportYAML(exportYAML)
 	}
 
 	// Read the telemetry vars info
