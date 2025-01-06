@@ -9,6 +9,7 @@ import (
 	"io"
 
 	"github.com/ESilva15/goirsdk/winutils"
+	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -52,17 +53,18 @@ func (i *IBT) IsConnected() bool {
 	return false
 }
 
-func (i *IBT) ExportToIBT() {
-	rbuf := make([]byte, fileMapSize)
-
-	_, err := i.File.ReadAt(rbuf, 0)
+func (i *IBT) exportYAML(path string) {
+	file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
-		log.Fatal(err)
+		log.Println("Failed to open output file for YAML: ", err)
 	}
+	defer file.Close()
 
-	_, err = i.FileToExport.Write(rbuf)
+	enc := yaml.NewEncoder(file)
+
+	err = enc.Encode(i.SessionInfo)
 	if err != nil {
-		log.Fatal(err)
+		log.Println("Failed to print YAML to file: ", err)
 	}
 }
 
@@ -85,11 +87,6 @@ func Init(f Reader, exportTelem string, exportYAML string) (*IBT, error) {
 			return nil, err
 		}
 		ibt.FileToExport.Sync()
-	}
-
-	// Do the same for the YAMLExport
-	if exportYAML != "" {
-		// Do the thing here, yo
 	}
 
 	if ibt.File == nil {
@@ -162,6 +159,11 @@ func Init(f Reader, exportTelem string, exportYAML string) (*IBT, error) {
 	_, err = ibt.FileToExport.WriteAt(sessionInfoStringRaw[:], int64(ibt.Headers.SessionInfoOffset))
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	// Write to YAML output file
+	if exportYAML != "" {
+		ibt.exportYAML(exportYAML)
 	}
 
 	ibt.SessionInfo, err = parseSessionInfo(sessionInfoStringRaw, ibt.Headers.SessionInfoLength)
