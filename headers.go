@@ -1,6 +1,8 @@
 package goirsdk
 
 import (
+	"github.com/ESilva15/goirsdk/logger"
+
 	"bytes"
 	"encoding/binary"
 	"fmt"
@@ -39,6 +41,47 @@ type TelemetryHeaders struct {
 	BufOffset int32
 }
 
+// readHeader will read the header out of the telemetry data
+func (i *IBT) readHeader() error {
+	log := logger.GetInstance()
+
+	var headerRaw [FileHeaderSize]byte
+	_, err := i.File.ReadAt(headerRaw[:], 0)
+	if err != nil {
+		return fmt.Errorf("Failed to read headers from file: %v", err)
+	}
+	i.Headers, err = parseTelemetryHeader(headerRaw)
+	if err != nil {
+		return fmt.Errorf("Unable to read headers from file: %v", err)
+	}
+
+	// Write to the output file - TODO: this should only write if necessary
+	if i.IBTExport != nil {
+    err = i.exportIBT(headerRaw[:], 0)
+		if err != nil {
+      log.Printf("Failed to export headers: %v\n", err)
+		}
+	}
+
+	return nil
+}
+
+// parseTelemetryHeader will read the IBT file headers from a correctly sized
+// buffer.
+// You need to pass a the first FILE_HEADER_SIZE bytes of the buffer
+func parseTelemetryHeader(buf [FileHeaderSize]byte) (*TelemetryHeaders, error) {
+	// utils.HexDump(buf[:])
+	// fmt.Printf("Len: %d\n", len(buf))
+
+	dst := TelemetryHeaders{}
+	err := binary.Read(bytes.NewBuffer(buf[:]), binary.LittleEndian, &dst)
+	if err != nil {
+		return nil, fmt.Errorf("unable to unpack data: %v", err)
+	}
+
+	return &dst, nil
+}
+
 // ToString renders a string showing the values of the struct
 func (th *TelemetryHeaders) ToString() string {
 	return fmt.Sprintf(
@@ -60,20 +103,4 @@ func (th *TelemetryHeaders) ToString() string {
 		th.NumVars, th.NumVars, th.VarHeaderOffset, th.VarHeaderOffset,
 		th.NumBuf, th.NumBuf, th.BufLen, th.BufLen, th.BufOffset, th.BufOffset,
 	)
-}
-
-// parseTelemetryHeader will read the IBT file headers from a correctly sized
-// buffer.
-// You need to pass a the first FILE_HEADER_SIZE bytes of the buffer
-func parseTelemetryHeader(buf [FileHeaderSize]byte) (*TelemetryHeaders, error) {
-	// utils.HexDump(buf[:])
-	// fmt.Printf("Len: %d\n", len(buf))
-
-	dst := TelemetryHeaders{}
-	err := binary.Read(bytes.NewBuffer(buf[:]), binary.LittleEndian, &dst)
-	if err != nil {
-		return nil, fmt.Errorf("unable to unpack data: %v", err)
-	}
-
-	return &dst, nil
 }

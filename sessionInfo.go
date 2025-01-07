@@ -1,7 +1,10 @@
 package goirsdk
 
 import (
+	"github.com/ESilva15/goirsdk/logger"
+
 	"encoding/json"
+	"fmt"
 	"log"
 	"strings"
 
@@ -305,6 +308,38 @@ type Driver struct {
 	CarSponsor2             int     `yaml:"CarSponsor_2"`
 	CurDriverIncidentCount  int     `yaml:"CurDriverIncidentCount"`
 	TeamIncidentCount       int     `yaml:"TeamIncidentCount"`
+}
+
+// readSessionInfo will read the session info yaml out of the telemetry data
+func (i *IBT) readSessionInfo() error {
+	log := logger.GetInstance()
+
+	sessionInfoStringRaw := make([]byte, i.Headers.SessionInfoLength)
+	_, err := i.File.ReadAt(sessionInfoStringRaw, int64(i.Headers.SessionInfoOffset))
+	if err != nil {
+		return fmt.Errorf("Failed to read sessionInfoString from file: %v", err)
+	}
+
+	// Write to the output file
+	_, err = i.IBTExport.WriteAt(sessionInfoStringRaw[:], int64(i.Headers.SessionInfoOffset))
+	if err != nil {
+		return fmt.Errorf("Failed to export session info string: %v\n", err)
+	}
+
+	i.SessionInfo, err = parseSessionInfo(sessionInfoStringRaw, i.Headers.SessionInfoLength)
+	if err != nil {
+		return fmt.Errorf("Unable to parse SessionInfoString from file: %v", err)
+	}
+
+	// Write to YAML output file
+	if i.YAMLExportPath != "" {
+		err := i.exportYAML()
+		if err != nil {
+			log.Println("Failed to export YAML string: %v\n", err)
+		}
+	}
+
+	return nil
 }
 
 // parseSessionInfo will parse the sessionInfo buffer into the SessionInfoYAML

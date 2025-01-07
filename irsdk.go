@@ -2,13 +2,14 @@
 package goirsdk
 
 import (
-	"github.com/ESilva15/goirsdk/logger"
+	// "github.com/ESilva15/goirsdk/logger"
 
 	"fmt"
 	"os"
 
 	"io"
 
+	"github.com/ESilva15/goirsdk/logger"
 	"github.com/ESilva15/goirsdk/winutils"
 	"gopkg.in/yaml.v3"
 )
@@ -31,14 +32,16 @@ type Reader interface {
 
 // IBT struct will hold the relevant data for a given IBT file
 type IBT struct {
-	File         Reader                    // Source of the data
-	FileToExport *os.File                  // If set, it will export the IBT data to the file
-	YAMLExport   *os.File                  // If set, it will export the session YAML to the file
-	Headers      *TelemetryHeaders         // IBT file Headers
-	SubHeaders   *DiskSubHeader            // IBT file Sub Headers
-	SessionInfo  *SessionInfoYAML          // IBT file Session Info
-	Vars         *TelemetryVars            // Vars will hold the telemetry data
-	winUtils     *winutils.IRacingWinUtils // WinUtils gives access to the system utilities
+	File           Reader                    // Source of the data
+	IBTExport      *os.File                  // If set, it will export the IBT data to the file
+	IBTExportPath  string                    // Path for IBT export
+	YAMLExport     *os.File                  // If set, it will export the session YAML to the file
+	YAMLExportPath string                    // Path for YAML export
+	Headers        *TelemetryHeaders         // IBT file Headers
+	SubHeaders     *DiskSubHeader            // IBT file Sub Headers
+	SessionInfo    *SessionInfoYAML          // IBT file Session Info
+	Vars           *TelemetryVars            // Vars will hold the telemetry data
+	winUtils       *winutils.IRacingWinUtils // WinUtils gives access to the system utilities
 }
 
 func (i *IBT) IsConnected() bool {
@@ -54,9 +57,12 @@ func (i *IBT) IsConnected() bool {
 	return false
 }
 
-func (i *IBT) exportYAML(path string) error {
-	file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+func (i *IBT) exportYAML() error {
+	log := logger.GetInstance()
+
+	file, err := os.OpenFile(i.YAMLExportPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
+		log.Printf("Failed to open file for YAML export: %v\n", err)
 		return fmt.Errorf("failed to open output file for YAML: %v", err)
 	}
 	defer file.Close()
@@ -65,29 +71,47 @@ func (i *IBT) exportYAML(path string) error {
 
 	err = enc.Encode(i.SessionInfo)
 	if err != nil {
+		log.Printf("Failed to write into file for YAML export: %v\n", err)
 		return fmt.Errorf("failed to write YAML contents to file: %v", err)
 	}
 
 	return nil
 }
 
+func (i *IBT) exportIBT(data []byte, offset int64) error {
+  log := logger.GetInstance()
+
+	_, err := i.IBTExport.WriteAt(data, offset)
+
+  if err != nil {
+    i.IBTExport.Close()
+    i.IBTExport = nil
+    log.Println("Won't attempt to export anymore")
+    return err
+  }
+
+	return nil
+}
+
 // Init serves to initialize and get a hold of a IBT struct
 func Init(f Reader, exportTelem string, exportYAML string) (*IBT, error) {
-	log := logger.GetInstance()
+	// log := logger.GetInstance()
 
 	// Read the header of the file
 	var err error
 	ibt := IBT{
-		File:         f,
-		FileToExport: nil,
-		YAMLExport:   nil,
-		Vars:         &TelemetryVars{},
-		winUtils:     nil,
+		File:           f,
+		IBTExport:      nil,
+		IBTExportPath:  exportTelem,
+		YAMLExport:     nil,
+		YAMLExportPath: exportYAML,
+		Vars:           &TelemetryVars{},
+		winUtils:       nil,
 	}
 
 	// If requested to output to a telemetry file
 	if exportTelem != "" {
-		ibt.FileToExport, err = os.OpenFile(exportTelem, os.O_CREATE|os.O_RDWR, 0644)
+		ibt.IBTExport, err = os.OpenFile(exportTelem, os.O_CREATE|os.O_RDWR, 0644)
 		if err != nil {
 			return nil, fmt.Errorf("failed to open ibt export file: %v", err)
 		}
@@ -122,59 +146,21 @@ func Init(f Reader, exportTelem string, exportYAML string) (*IBT, error) {
 	}
 
 	// Read the file headers
-	var headerRaw [FileHeaderSize]byte
-	_, err = ibt.File.ReadAt(headerRaw[:], 0)
+	err = ibt.readHeader()
 	if err != nil {
-		return nil, fmt.Errorf("Failed to read headers from file: %v", err)
-	}
-	ibt.Headers, err = parseTelemetryHeader(headerRaw)
-	if err != nil {
-		return nil, fmt.Errorf("Unable to read headers from file: %v", err)
-	}
-	// Write to the output file
-	_, err = ibt.FileToExport.WriteAt(headerRaw[:], 0)
-	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	// Read the disk sub headers
-	var subheaderRaw [SubHeaderSize]byte
-	_, err = ibt.File.ReadAt(subheaderRaw[:], HeaderSize)
+	err = ibt.readSubheader()
 	if err != nil {
-		return nil, fmt.Errorf("Failed to read disk subheaders from file: %v", err)
-	}
-	ibt.SubHeaders, err = parseTelemetrySubHeader(subheaderRaw)
-	if err != nil {
-		return nil, fmt.Errorf("Unable to parse disk subheaders from file: %v", err)
-	}
-	// Write to the output file
-	_, err = ibt.FileToExport.WriteAt(subheaderRaw[:], HeaderSize)
-	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	// Read session info string
-	sessionInfoStringRaw := make([]byte, ibt.Headers.SessionInfoLength)
-	_, err = ibt.File.ReadAt(sessionInfoStringRaw, int64(ibt.Headers.SessionInfoOffset))
+	err = ibt.readSessionInfo()
 	if err != nil {
-		return nil, fmt.Errorf("Failed to read sessionInfoString from file: %v", err)
-	}
-	// Write to the output file
-	_, err = ibt.FileToExport.WriteAt(sessionInfoStringRaw[:], int64(ibt.Headers.SessionInfoOffset))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	ibt.SessionInfo, err = parseSessionInfo(sessionInfoStringRaw, ibt.Headers.SessionInfoLength)
-	if err != nil {
-		return nil, fmt.Errorf("Unable to parse SessionInfoString from file: %v", err)
-	}
-	// Write to YAML output file
-	if exportYAML != "" {
-		err := ibt.exportYAML(exportYAML)
-		if err != nil {
-			return nil, err
-		}
+		return nil, err
 	}
 
 	// Read the telemetry vars info

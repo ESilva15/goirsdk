@@ -108,9 +108,12 @@ func (i *IBT) readVariablerHeaders() error {
 			return err
 		}
 
-		_, err = i.FileToExport.WriteAt(rbuf, int64(i.Headers.VarHeaderOffset+k*VarHeaderSize))
-		if err != nil {
-			log.Fatal(err)
+		if i.IBTExport != nil {
+			err = i.exportIBT(rbuf, int64(i.Headers.VarHeaderOffset+k*VarHeaderSize))
+			if err != nil {
+				// Don't outright kill it here - maybe nowhere else
+				log.Printf("Failed to export variable contents: %v\n", err)
+			}
 		}
 
 		var dst IBTVar
@@ -203,9 +206,11 @@ func (i *IBT) Update(timeout time.Duration) (IRacingState, error) {
 			return Failed, err
 		}
 
-		_, err = i.FileToExport.WriteAt(buf, int64(i.Headers.BufOffset+i.Vars.RecorderTick*i.Headers.BufLen))
-		if err != nil {
-			log.Fatalf("Failed to write to file [2]: %v", err)
+		if i.IBTExport != nil {
+			err = i.exportIBT(buf, int64(i.Headers.BufOffset+i.Vars.RecorderTick*i.Headers.BufLen))
+			if err != nil {
+				log.Printf("Failed to export live telemetry data: %v", err)
+			}
 		}
 
 		err = i.readData(buf)
@@ -226,10 +231,12 @@ func (i *IBT) Update(timeout time.Duration) (IRacingState, error) {
 
 		// Make this happen in a different thread, or have this send to a queue that has a thread
 		// writing to a file
-		_, err = i.FileToExport.WriteAt(buf, int64(start))
-		if err != nil {
-			log.Fatalf("Failed to write to file [1]: %v\n", err)
-		}
+    if i.IBTExport != nil {
+			err = i.exportIBT(buf, int64(start))
+			if err != nil {
+				log.Printf("Failed to export offline telemetry data: %v", err)
+			}
+    }
 
 		if err == io.EOF {
 			return Ended, nil

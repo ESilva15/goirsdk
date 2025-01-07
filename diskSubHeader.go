@@ -1,6 +1,8 @@
 package goirsdk
 
 import (
+	"github.com/ESilva15/goirsdk/logger"
+
 	"bytes"
 	"encoding/binary"
 	"fmt"
@@ -17,6 +19,31 @@ type DiskSubHeader struct {
 	EndTime     float64 // EndTime of file relative to start of session
 	LapCount    int32   // LapCount represents the total number laps
 	RecordCount int32   // RecordCount holds the number of data frames
+}
+
+// readSubheader will read the subheader contents out of the telemetry data
+func (i *IBT) readSubheader() error {
+	log := logger.GetInstance()
+
+	var subheaderRaw [SubHeaderSize]byte
+	_, err := i.File.ReadAt(subheaderRaw[:], HeaderSize)
+	if err != nil {
+		return fmt.Errorf("Failed to read disk subheaders from file: %v", err)
+	}
+	i.SubHeaders, err = parseTelemetrySubHeader(subheaderRaw)
+	if err != nil {
+		return fmt.Errorf("Unable to parse disk subheaders from file: %v", err)
+	}
+
+	// Write to the output file - TODO add the check
+	if i.IBTExport != nil {
+    err = i.exportIBT(subheaderRaw[:], HeaderSize)
+		if err != nil {
+      log.Printf("Failed to export subheaders: %v\n", err)
+		}
+	}
+
+	return nil
 }
 
 // parseTelemetrySubHeader will return a pointer to a DiskSubHeader variable
