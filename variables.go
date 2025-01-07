@@ -112,7 +112,6 @@ func (i *IBT) readVariablerHeaders() error {
 		if err != nil {
 			log.Fatal(err)
 		}
-		i.FileToExport.Sync()
 
 		var dst IBTVar
 		err = binary.Read(bytes.NewBuffer(rbuf[:]), binary.LittleEndian, &dst)

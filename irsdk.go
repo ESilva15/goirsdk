@@ -2,8 +2,9 @@
 package goirsdk
 
 import (
+	"github.com/ESilva15/goirsdk/logger"
+
 	"fmt"
-	"log"
 	"os"
 
 	"io"
@@ -53,10 +54,10 @@ func (i *IBT) IsConnected() bool {
 	return false
 }
 
-func (i *IBT) exportYAML(path string) {
+func (i *IBT) exportYAML(path string) error {
 	file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
-		log.Println("Failed to open output file for YAML: ", err)
+		return fmt.Errorf("failed to open output file for YAML: %v", err)
 	}
 	defer file.Close()
 
@@ -64,12 +65,16 @@ func (i *IBT) exportYAML(path string) {
 
 	err = enc.Encode(i.SessionInfo)
 	if err != nil {
-		log.Println("Failed to print YAML to file: ", err)
+		return fmt.Errorf("failed to write YAML contents to file: %v", err)
 	}
+
+	return nil
 }
 
 // Init serves to initialize and get a hold of a IBT struct
 func Init(f Reader, exportTelem string, exportYAML string) (*IBT, error) {
+	log := logger.GetInstance()
+
 	// Read the header of the file
 	var err error
 	ibt := IBT{
@@ -84,9 +89,8 @@ func Init(f Reader, exportTelem string, exportYAML string) (*IBT, error) {
 	if exportTelem != "" {
 		ibt.FileToExport, err = os.OpenFile(exportTelem, os.O_CREATE|os.O_RDWR, 0644)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to open ibt export file: %v", err)
 		}
-		ibt.FileToExport.Sync()
 	}
 
 	if ibt.File == nil {
@@ -167,7 +171,10 @@ func Init(f Reader, exportTelem string, exportYAML string) (*IBT, error) {
 	}
 	// Write to YAML output file
 	if exportYAML != "" {
-		ibt.exportYAML(exportYAML)
+		err := ibt.exportYAML(exportYAML)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Read the telemetry vars info
