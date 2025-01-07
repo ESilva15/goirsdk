@@ -321,9 +321,11 @@ func (i *IBT) readSessionInfo() error {
 	}
 
 	// Write to the output file
-	_, err = i.IBTExport.WriteAt(sessionInfoStringRaw[:], int64(i.Headers.SessionInfoOffset))
-	if err != nil {
-		return fmt.Errorf("Failed to export session info string: %v\n", err)
+	if i.IBTExport != nil {
+		err := i.exportIBT(sessionInfoStringRaw[:], int64(i.Headers.SessionInfoOffset))
+		if err != nil {
+			log.Printf("Failed to export offline telemetry data: %v", err)
+		}
 	}
 
 	i.SessionInfo, err = parseSessionInfo(sessionInfoStringRaw, i.Headers.SessionInfoLength)
@@ -335,7 +337,7 @@ func (i *IBT) readSessionInfo() error {
 	if i.YAMLExportPath != "" {
 		err := i.exportYAML()
 		if err != nil {
-			log.Println("Failed to export YAML string: %v\n", err)
+			log.Printf("Failed to export YAML string: %v\n", err)
 		}
 	}
 
