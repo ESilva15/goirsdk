@@ -167,6 +167,8 @@ func (i *IBT) readData(buf []byte) error {
 	return nil
 }
 
+// Update will read the next data chunk from the telemetry data, works for both the
+// live and offline data
 func (i *IBT) Update(timeout time.Duration) (IRacingState, error) {
 	if i.winUtils != nil {
 		// Put a way to check if the sim is active here

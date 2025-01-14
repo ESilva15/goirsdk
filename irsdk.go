@@ -2,8 +2,6 @@
 package goirsdk
 
 import (
-	// "github.com/ESilva15/goirsdk/logger"
-
 	"fmt"
 	"os"
 
@@ -79,21 +77,27 @@ func (i *IBT) exportYAML() error {
 }
 
 func (i *IBT) exportIBT(data []byte, offset int64) error {
-  log := logger.GetInstance()
+	log := logger.GetInstance()
 
 	_, err := i.IBTExport.WriteAt(data, offset)
 
-  if err != nil {
-    i.IBTExport.Close()
-    i.IBTExport = nil
-    log.Println("Won't attempt to export anymore")
-    return err
-  }
+	if err != nil {
+		i.IBTExport.Close()
+		i.IBTExport = nil
+		log.Println("Won't attempt to export anymore")
+		return err
+	}
 
 	return nil
 }
 
 // Init serves to initialize and get a hold of a IBT struct
+// f -> is the source data, pass nil for the SDK to read live data or a
+// *os.File to read from a file
+// exportTelem -> is a string with the path to export the telemetry data, pass
+// an empty string to not export any data
+// exportTelem -> is a string with the path to export the session info data, pass
+// an empty string to not export any data
 func Init(f Reader, exportTelem string, exportYAML string) (*IBT, error) {
 	// log := logger.GetInstance()
 
@@ -172,6 +176,7 @@ func Init(f Reader, exportTelem string, exportYAML string) (*IBT, error) {
 	return &ibt, nil
 }
 
+// Close cleans up our irsdk instance
 func (i *IBT) Close() {
 	if i.winUtils != nil {
 		// If its not live data, the user is the one with ownership of the handle
