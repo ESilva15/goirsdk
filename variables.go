@@ -152,6 +152,18 @@ func (i *IBT) readData(buf []byte) error {
 			v.Value = int(rbuf[0]) > 0
 		case IRSDK_int:
 			v.Value = int(binary.LittleEndian.Uint32(rbuf))
+      fmt.Printf("%s\n", v.Name)
+      if v.Name == "CarIdxPosition" {
+        fmt.Printf("CarIdXPosition: %d\n", v.Count)
+        for entry := range v.Count {
+					entryOffset := v.Offset + int32(entry)*int32(VarTypes[int(v.Type)].Size)
+					rbuf := buf[entryOffset : entryOffset+int32(VarTypes[int(v.Type)].Size)]
+					v := int(binary.LittleEndian.Uint32(rbuf))
+					if v != 0 {
+						fmt.Printf("[%d] %v %v\n", entry, v, i.SessionInfo.DriverInfo.Drivers[entry].AbbrevName)
+					}
+        }
+      }
 		case IRSDK_bitField:
 			v.Value = fmt.Sprintf("0x%x", int(binary.LittleEndian.Uint32(rbuf)))
 		case IRSDK_float:
