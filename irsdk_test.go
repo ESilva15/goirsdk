@@ -12,7 +12,21 @@ import (
 type StandingsLine struct {
 	CarIdx     int
 	LapPct     float32
+	Lap        int32
 	DriverName string
+	EstTime    float32
+	TimeBehind float32
+}
+
+func lapTimeRepresentation(t float32) string {
+	if t < 0 {
+		t = 0
+	}
+
+	wholeSeconds := int64(t)
+	lapTime := time.Unix(wholeSeconds, int64((t-float32(wholeSeconds))*1e9))
+
+	return lapTime.Format("04:05.000")
 }
 
 func TestFunctionality(t *testing.T) {
@@ -42,9 +56,13 @@ func TestFunctionality(t *testing.T) {
 		if _, ok := i.Vars.Vars["CarIdxPosition"]; !ok {
 			log.Fatal("Field `CarIdxPosition` doesn't exist")
 		}
-		driversPositions := i.Vars.Vars["CarIdxLapDistPct"].Value.([]float32)
+		driversLapDistPct := i.Vars.Vars["CarIdxLapDistPct"].Value.([]float32)
+		driversEstTime := i.Vars.Vars["CarIdxEstTime"].Value.([]float32)
+		driversLap := i.Vars.Vars["CarIdxLap"].Value.([]int32)
+		// driversBehind := i.Vars.Vars["CarIdxF2Time"].Value.([]float32)
 
 		drivers := i.SessionInfo.DriverInfo.Drivers
+    myIdx := i.SessionInfo.DriverInfo.DriverCarIdx
 
 		standings := make([]StandingsLine, len(drivers))
 
@@ -56,18 +74,27 @@ func TestFunctionality(t *testing.T) {
 
 			standings[k] = StandingsLine{
 				CarIdx:     k,
-				LapPct:     float32(driversPositions[k]),
+				LapPct:     driversLapDistPct[k],
 				DriverName: drivers[k].UserName,
+				EstTime:    driversEstTime[k],
+				Lap:        driversLap[k],
+				TimeBehind: driversEstTime[myIdx],
 			}
 		}
 
 		sort.Slice(standings, func(i int, j int) bool {
+			if standings[i].Lap > int32(standings[j].Lap) {
+				return true
+			}
+
 			return standings[i].LapPct >= standings[j].LapPct
 		})
 
-		for p, v := range standings {
-			fmt.Printf("[%d] %s %f\n", p + 1, v.DriverName, v.LapPct)
-		}
+    fmt.Printf("%v\n", driversEstTime)
+		// for p, v := range standings {
+		// 	fmt.Printf("[%2d] %-30s %13f %13f\n",
+		// 		p+1, v.DriverName, v.LapPct, driversEstTime[p] - driversEstTime[myIdx])
+		// }
 
 		<-mainLoopTicker.C
 	}
