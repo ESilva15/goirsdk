@@ -1,12 +1,19 @@
 package goirsdk
 
 import (
-  "fmt"
+	"fmt"
 	"log"
 	"os"
+	"sort"
 	"testing"
 	"time"
 )
+
+type StandingsLine struct {
+	CarIdx     int
+	LapPct     float32
+	DriverName string
+}
 
 func TestFunctionality(t *testing.T) {
 	input, err := os.Open("../testTelemetry/supercars_race_watkins_glenn.ibt")
@@ -35,9 +42,11 @@ func TestFunctionality(t *testing.T) {
 		if _, ok := i.Vars.Vars["CarIdxPosition"]; !ok {
 			log.Fatal("Field `CarIdxPosition` doesn't exist")
 		}
-    driversPositions := i.Vars.Vars["CarIdxPosition"].Value.([]int)
+		driversPositions := i.Vars.Vars["CarIdxLapDistPct"].Value.([]float32)
 
 		drivers := i.SessionInfo.DriverInfo.Drivers
+
+		standings := make([]StandingsLine, len(drivers))
 
 		fmt.Printf("\033[?25l\033[2J\033[H")
 		for k := range len(drivers) {
@@ -45,7 +54,19 @@ func TestFunctionality(t *testing.T) {
 				continue
 			}
 
-			fmt.Printf("[%d] [%d] %s\n", k, driversPositions[drivers[k].CarIdx], drivers[k].UserName)
+			standings[k] = StandingsLine{
+				CarIdx:     k,
+				LapPct:     float32(driversPositions[k]),
+				DriverName: drivers[k].UserName,
+			}
+		}
+
+		sort.Slice(standings, func(i int, j int) bool {
+			return standings[i].LapPct >= standings[j].LapPct
+		})
+
+		for p, v := range standings {
+			fmt.Printf("[%d] %s %f\n", p + 1, v.DriverName, v.LapPct)
 		}
 
 		<-mainLoopTicker.C

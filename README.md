@@ -3,6 +3,8 @@
 - [x] Read data from a stored `.ibt` file
 - [x] Allow to export the data to an `.ibt` file
 - [x] Allow to export the session info data to a `.yaml` file
+- [ ] Make sure variables with multiple counts are correctly parsed and stored
+- [ ] Correctly support and implement the bitFields data
 - [ ] Add the message broadcasting system
 - [ ] Explore a more convenient API for fetching the data for the SDK user
 - [ ] Change the pattern in which the data is fetched from the telemetry and

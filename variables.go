@@ -71,6 +71,20 @@ type Var struct {
 	Value interface{}
 }
 
+func (v *Var) ToString() string {
+	return fmt.Sprintf(
+		"Type:        %5d (0x%08x)\n"+
+			"Offset:      %5d (0x%08x)\n"+
+			"Count:       %5d (0x%08x)\n"+
+			"CountAsTime: %5t\n"+
+			"Name:        %s\n"+
+			"Description: %s\n"+
+			"Unit:        %s",
+		v.Type, v.Type, v.Offset, v.Offset, v.Count, v.Count,
+		v.CountAsTime, v.Name, v.Description, v.Unit,
+	)
+}
+
 func (v *IBTVar) ToString() string {
 	return fmt.Sprintf(
 		"Type:        %5d (0x%08x)\n"+
@@ -147,29 +161,103 @@ func (i *IBT) readData(buf []byte) error {
 		// Read the value
 		switch v.Type {
 		case IRSDK_char:
-			v.Value = string(rbuf[0])
-		case IRSDK_bool:
-			v.Value = int(rbuf[0]) > 0
-		case IRSDK_int:
 			if v.Count > 1 {
-				data := make([]int, v.Count)
+				// Array of data
+				data := make([]string, v.Count)
 				for entry := 0; entry < int(v.Count); entry++ {
 					entryOffset := v.Offset + int32(entry)*int32(VarTypes[int(v.Type)].Size)
 					rbuf := buf[entryOffset : entryOffset+int32(VarTypes[int(v.Type)].Size)]
-					newValue := int(binary.LittleEndian.Uint32(rbuf))
+
+					newValue := string(rbuf[0])
 					data[entry] = newValue
 				}
 
 				v.Value = data
 			} else {
+				// Single value
+				v.Value = string(rbuf[0])
+			}
+		case IRSDK_bool:
+			if v.Count > 1 {
+				// Array of data
+				data := make([]bool, v.Count)
+				for entry := 0; entry < int(v.Count); entry++ {
+					entryOffset := v.Offset + int32(entry)*int32(VarTypes[int(v.Type)].Size)
+					rbuf := buf[entryOffset : entryOffset+int32(VarTypes[int(v.Type)].Size)]
+
+					newValue := int(rbuf[0]) > 0
+					data[entry] = newValue
+				}
+
+				v.Value = data
+			} else {
+				// Single value
+				v.Value = int(rbuf[0]) > 0
+			}
+		case IRSDK_int:
+			if v.Count > 1 {
+				// Array of data
+				data := make([]int32, v.Count)
+				for entry := 0; entry < int(v.Count); entry++ {
+					entryOffset := v.Offset + int32(entry)*int32(VarTypes[int(v.Type)].Size)
+					rbuf := buf[entryOffset : entryOffset+int32(VarTypes[int(v.Type)].Size)]
+					newValue := int32(binary.LittleEndian.Uint32(rbuf))
+					data[entry] = newValue
+				}
+
+				v.Value = data
+			} else {
+				// Single value
 				v.Value = int(binary.LittleEndian.Uint32(rbuf))
 			}
 		case IRSDK_bitField:
-			v.Value = fmt.Sprintf("0x%x", int(binary.LittleEndian.Uint32(rbuf)))
+			if v.Count > 1 {
+				// Array of data
+				data := make([]string, v.Count)
+				for entry := 0; entry < int(v.Count); entry++ {
+					entryOffset := v.Offset + int32(entry)*int32(VarTypes[int(v.Type)].Size)
+					rbuf := buf[entryOffset : entryOffset+int32(VarTypes[int(v.Type)].Size)]
+					newValue := fmt.Sprintf("0x%x", int(binary.LittleEndian.Uint32(rbuf)))
+					data[entry] = newValue
+				}
+
+				v.Value = data
+			} else {
+				// Single value
+				v.Value = fmt.Sprintf("0x%x", int(binary.LittleEndian.Uint32(rbuf)))
+			}
 		case IRSDK_float:
-			v.Value = math.Float32frombits(uint32(binary.LittleEndian.Uint32(rbuf)))
+			if v.Count > 1 {
+				// Array of data
+				data := make([]float32, v.Count)
+				for entry := 0; entry < int(v.Count); entry++ {
+					entryOffset := v.Offset + int32(entry)*int32(VarTypes[int(v.Type)].Size)
+					rbuf := buf[entryOffset : entryOffset+int32(VarTypes[int(v.Type)].Size)]
+					newValue := math.Float32frombits(uint32(binary.LittleEndian.Uint32(rbuf)))
+					data[entry] = newValue
+				}
+
+				v.Value = data
+			} else {
+				// Single value
+				v.Value = math.Float32frombits(uint32(binary.LittleEndian.Uint32(rbuf)))
+			}
 		case IRSDK_double:
-			v.Value = math.Float64frombits(uint64(binary.LittleEndian.Uint64(rbuf)))
+			if v.Count > 1 {
+				// Array of data
+				data := make([]float64, v.Count)
+				for entry := 0; entry < int(v.Count); entry++ {
+					entryOffset := v.Offset + int32(entry)*int32(VarTypes[int(v.Type)].Size)
+					rbuf := buf[entryOffset : entryOffset+int32(VarTypes[int(v.Type)].Size)]
+					newValue := math.Float64frombits(uint64(binary.LittleEndian.Uint64(rbuf)))
+					data[entry] = newValue
+				}
+
+				v.Value = data
+			} else {
+				// Single value
+				v.Value = math.Float64frombits(uint64(binary.LittleEndian.Uint64(rbuf)))
+			}
 		}
 		// --------------
 
@@ -236,6 +324,7 @@ func (i *IBT) Update(timeout time.Duration) (IRacingState, error) {
 			return Ended, nil
 		}
 
+    // Document why this is here, I don't remember the exact words right now
 		i.Vars.RecorderTick++
 	} else {
 		// This will get the dataframe corresponding to a given tick
@@ -245,12 +334,12 @@ func (i *IBT) Update(timeout time.Duration) (IRacingState, error) {
 
 		// Make this happen in a different thread, or have this send to a queue that has a thread
 		// writing to a file
-    if i.IBTExport != nil {
+		if i.IBTExport != nil {
 			err = i.exportIBT(buf, int64(start))
 			if err != nil {
 				log.Printf("Failed to export offline telemetry data: %v", err)
 			}
-    }
+		}
 
 		if err == io.EOF {
 			return Ended, nil
