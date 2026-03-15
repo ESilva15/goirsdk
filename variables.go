@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"math"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -153,6 +154,38 @@ func (i *IBT) readVariablerHeaders() error {
 	return nil
 }
 
+func (i *IBT) parseEngineWarnings() {
+	val, ok := i.Vars.Vars["EngineWarnings"]
+	if !ok {
+		log.Fatal("no engine warnings")
+	}
+
+	bitfield, err := strconv.ParseInt(val.Value.(string), 0, 64)
+	if err != nil {
+		log.Fatal("Unable to get engine warnings: " + err.Error())
+	}
+
+	for _, ew := range irsdkEngineWarnings {
+		result := (int(bitfield) & ew.Value) != 0
+		i.Vars.Vars[ew.Name] = Var{Value: result}
+	}
+}
+
+// parseBitfieldVariables will parse the variables:
+// - irsdk_CameraState "CamCameraState"
+// - irsdk_EngineWarnings "EngineWarnings"
+// - irsdk_PitSvFlags "PitSvFlags"
+// - irsdk_Flags "SessionFlags"
+// - irsdk_SessionState "SessionState"
+// - irsdk_TrkLoc "CarIdxTrackSurface"
+//
+// The approach for now will be to create unique entries in the data map for
+// the fields in these variables
+func (i *IBT) parseBitfieldVariables() {
+	// Parse the EngineWarnings variables - its the only one for now
+	i.parseEngineWarnings()
+}
+
 func (i *IBT) readData(buf []byte) error {
 	for k, v := range i.Vars.Vars {
 		// Slice of the variable value in the buffer
@@ -264,6 +297,9 @@ func (i *IBT) readData(buf []byte) error {
 		i.Vars.Vars[k] = v
 	}
 
+	// Parse the bitfield variables here
+	i.parseBitfieldVariables()
+
 	return nil
 }
 
@@ -324,7 +360,7 @@ func (i *IBT) Update(timeout time.Duration) (IRacingState, error) {
 			return Ended, nil
 		}
 
-    // Document why this is here, I don't remember the exact words right now
+		// Document why this is here, I don't remember the exact words right now
 		i.Vars.RecorderTick++
 	} else {
 		// This will get the dataframe corresponding to a given tick

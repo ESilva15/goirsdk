@@ -119,7 +119,25 @@ const (
 
 // Some other constants that I need to get trough
 // // bit fields
-// enum irsdk_EngineWarnings 
+
+type bitfieldValue struct {
+	Value int
+	Name  string
+}
+
+// EngineWarnings const
+var (
+	irsdkWaterTempWarning    = bitfieldValue{0x01, "irsdk_waterTempWarning"}
+	irsdkFuelPressureWarning = bitfieldValue{0x02, "irsdk_fueldPressureWarning"}
+	irsdkOilPressureWarning  = bitfieldValue{0x04, "irsdk_oilPressureWarning"}
+	irsdkEngineStalled       = bitfieldValue{0x08, "irsdk_engineStalled"}
+	irsdkPitSpeedLimiter     = bitfieldValue{0x10, "irsdk_pitSpeedLimiter"}
+	irsdkRevLimiterActive    = bitfieldValue{0x20, "irsdk_revLimiterActive"}
+	irsdkEngineWarnings      = []bitfieldValue{irsdkWaterTempWarning, irsdkFuelPressureWarning,
+		irsdkOilPressureWarning, irsdkEngineStalled, irsdkPitSpeedLimiter, irsdkRevLimiterActive}
+)
+
+// enum irsdk_EngineWarnings
 // {
 // 	irsdk_waterTempWarning		= 0x01,
 // 	irsdk_fuelPressureWarning	= 0x02,
