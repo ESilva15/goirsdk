@@ -116,7 +116,6 @@ const (
 // CamNose
 )
 
-
 // Some other constants that I need to get trough
 // // bit fields
 
@@ -133,8 +132,10 @@ var (
 	irsdkEngineStalled       = bitfieldValue{0x08, "irsdk_engineStalled"}
 	irsdkPitSpeedLimiter     = bitfieldValue{0x10, "irsdk_pitSpeedLimiter"}
 	irsdkRevLimiterActive    = bitfieldValue{0x20, "irsdk_revLimiterActive"}
+	irsdkAbsActive           = bitfieldValue{0x100, "irsdk_absActive"}
 	irsdkEngineWarnings      = []bitfieldValue{irsdkWaterTempWarning, irsdkFuelPressureWarning,
-		irsdkOilPressureWarning, irsdkEngineStalled, irsdkPitSpeedLimiter, irsdkRevLimiterActive}
+		irsdkOilPressureWarning, irsdkEngineStalled, irsdkPitSpeedLimiter, irsdkRevLimiterActive,
+		irsdkAbsActive}
 )
 
 // enum irsdk_EngineWarnings
@@ -183,7 +184,7 @@ var (
 // };
 //
 //
-// // status 
+// // status
 // enum irsdk_TrkLoc
 // {
 // 	irsdk_NotInWorld = -1,
