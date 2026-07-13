@@ -6,7 +6,7 @@
 - [ ] Make sure variables with multiple counts are correctly parsed and stored
 - [ ] Correctly support and implement the bitFields data
 - [ ] Add the message broadcasting system
-- [ ] Explore a more convenient API for fetching the data for the SDK user
+- [ ] Explore a more convenient API for fetching the data for the SDK user. Also do some renamings
 - [ ] Change the pattern in which the data is fetched from the telemetry and
 how it is exported into `.ibt` files
 
