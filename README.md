@@ -10,6 +10,11 @@
 - [ ] Change the pattern in which the data is fetched from the telemetry and
 how it is exported into `.ibt` files
 
+## BUGS
+- [ ] YAML string isn't correctly parsed. For example, during an event a team
+with hyphens in the name would break the session string parser. Use the file
+`raw_session_info_2026-07-11_082021.yaml` as validation and think of other cases.
+
 
 # About
 This project is a simple Go SDK for the popular iRacing racing simulator.
