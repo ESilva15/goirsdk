@@ -15,12 +15,11 @@ func msToKph(v float32) int {
 func main() {
 	// Instantiate our iRacing SDK instance
 	irsdk, err := goirsdk.Init(goirsdk.Options{
-		SourceType: goirsdk.IBTFile,
-		SourcePath: "../../../testTelemetry/gt3_mustang_bathurst.ibt",
-		// SourcePath:    "./exported.ibt",
+		SourceType:    goirsdk.IBTFile,
+		SourcePath:    "../../../../testTelemetry/gt3_mustang_bathurst.ibt",
 		IBTExportType: goirsdk.SharedMemoryFile,
-		// IBTExportPath: "./exported.ibt",
-		IBTExport: true,
+		IBTExportPath: "./exported.ibt",
+		IBTExport:     true,
 	})
 	if err != nil {
 		log.Fatalf("Failed to create iRacing interface: %v", err)
