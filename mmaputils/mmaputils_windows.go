@@ -1,12 +1,13 @@
 // go:build windows
 
-package winutils
+package mmaputils
 
 import (
 	"sync"
 	"time"
 	"unsafe"
 
+	"github.com/ESilva15/goirsdk/sharedMem"
 	"golang.org/x/sys/windows"
 )
 
@@ -34,6 +35,17 @@ func (u *utils) Close() {
 	closeEvent(&u.wEvent)
 	// Do we need to unload the user32DLL ???
 	// Do we need to close the broadcast channel ???
+}
+
+// OpenMemMap returns a Reader interface that can be used to read the data
+// No need to encapsulate it
+func OpenMemMap(name string, size uint32) (Reader, error) {
+	file, err := sharedMem.Open("Local\\"+name, size)
+	if err != nil {
+		return nil, err
+	}
+
+	return file, nil
 }
 
 // openEvent opens a windows.Handle for a given event

@@ -7,8 +7,8 @@ import (
 	"os"
 
 	"github.com/ESilva15/goirsdk/logger"
+	"github.com/ESilva15/goirsdk/mmaputils"
 	"github.com/ESilva15/goirsdk/sharedMem"
-	"github.com/ESilva15/goirsdk/winutils"
 	"gopkg.in/yaml.v3"
 )
 
@@ -52,7 +52,7 @@ type IBT struct {
 	// IBTExportPath  string                    // Path for IBT export
 	// YAMLExport     *os.File                  // If set, it will export the session YAML to the file
 	// YAMLExportPath string                    // Path for YAML export
-	winUtils *winutils.IRacingWinUtils // WinUtils gives access to the system utilities
+	winUtils *mmaputils.IRacingWinUtils // WinUtils gives access to the system utilities
 
 	// TODO: fragment this struct a little bit, for now I want to actually get
 	// stuff done so its enough to work as is
@@ -117,30 +117,31 @@ func (i *IBT) openSource() error {
 	switch i.Opts.SourceType {
 	case SharedMemoryFile:
 		// User is requesting us to read live data - present in the mem map file
-		i.File, err = winutils.OpenMemMap(IRSDK_MEMMAPFILENAME, fileMapSize)
+		i.File, err = mmaputils.OpenMemMap(MEMMAPFILENAME, fileMapSize)
 		if err != nil {
-			return fmt.Errorf("failed to open memory mapped file: %v", err)
+			return fmt.Errorf("failed to open memory mapped file: %+v", err)
 		}
 
 		// To use our windows interface we need to initialize it first
 		// it will return a struct with a pointer to the windows handles
 		// if, for some reason, we need to stub out this to run in on Linux its easier
-		i.winUtils, err = winutils.Init()
+		i.winUtils, err = mmaputils.Init()
 		if err != nil {
 			return err
 		}
 
+		// I don't believe we need this on windows either, but I'll have to check
 		// We need to open the windows event thing
-		err = i.winUtils.OpenWinEvent(IRSDK_DATAVALIDEVENTNAME)
-		if err != nil {
-			return err
-		}
+		// err = i.winUtils.OpenWinEvent(IRSDK_DATAVALIDEVENTNAME)
+		// if err != nil {
+		// 	return err
+		// }
 
 		// We need to open the broadcast channel
-		err = i.winUtils.OpenBroadcastChannel(IRSDK_BROADCASTMSGNAME)
-		if err != nil {
-			return err
-		}
+		// err = i.winUtils.OpenBroadcastChannel(IRSDK_BROADCASTMSGNAME)
+		// if err != nil {
+		// 	return err
+		// }
 	case IBTFile:
 		i.File, err = os.Open(i.Opts.SourcePath)
 		if err != nil {

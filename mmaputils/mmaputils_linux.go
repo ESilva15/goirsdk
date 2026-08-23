@@ -1,12 +1,14 @@
 //go:build (linux && cgo) || (darwin && cgo)
 
-package winutils
+package mmaputils
 
 import (
 	"fmt"
 	"net"
 	"os"
 	"time"
+
+	"github.com/ESilva15/goirsdk/sharedMem"
 )
 
 type utils struct {
@@ -23,6 +25,17 @@ func (u *utils) Close() {
 		u.listener.Close()
 		os.Remove(u.socketPath)
 	}
+}
+
+// OpenMemMap returns a Reader interface that can be used to read the data
+// No need to encapsulate it
+func OpenMemMap(name string, size uint32) (Reader, error) {
+	file, err := sharedMem.Open(name, size)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open `%s` with err: %+v", name, err)
+	}
+
+	return file, nil
 }
 
 // OpenEvent creates or connects to a Unix socket for event signaling on Linux
