@@ -3,22 +3,14 @@ package goirsdk
 
 import (
 	"fmt"
+	"io"
 	"os"
 
-	"io"
-
 	"github.com/ESilva15/goirsdk/logger"
+	"github.com/ESilva15/goirsdk/sharedMem"
 	"github.com/ESilva15/goirsdk/winutils"
 	"gopkg.in/yaml.v3"
 )
-
-const (
-	ibtFile = "./telemetryFiles/mx5_2016Okayama_full_2024_10_19_22_02_12.ibt"
-)
-
-func msToKph(v float32) int {
-	return int((3600 * v) / 1000)
-}
 
 // Reader is an interface to represent the readable data that can be either
 // a .ibt file (or live data, hopefully)
@@ -28,18 +20,47 @@ type Reader interface {
 	io.ReadCloser
 }
 
+type Writer interface {
+	io.WriterAt
+	io.Closer
+}
+
+type TelemetryContainer int
+
+const (
+	IBTFile          TelemetryContainer = iota
+	SharedMemoryFile TelemetryContainer = iota
+)
+
+type Options struct {
+	SourceType            TelemetryContainer // type of source data
+	SourcePath            string             // Path to source
+	IBTExportType         TelemetryContainer // export type of telemetry: store .ibt or replay in shm
+	IBTExportPath         string             // path where to export the data
+	IBTExport             bool               // whether to export the telemetry data
+	SessionInfoExport     bool               // whether to export the session info data
+	SessionInfoExportPath string             // path where to export the session info
+}
+
 // IBT struct will hold the relevant data for a given IBT file
 type IBT struct {
-	File           Reader                    // Source of the data
-	IBTExport      *os.File                  // If set, it will export the IBT data to the file
-	IBTExportPath  string                    // Path for IBT export
-	YAMLExport     *os.File                  // If set, it will export the session YAML to the file
-	YAMLExportPath string                    // Path for YAML export
-	Headers        *TelemetryHeaders         // IBT file Headers
-	SubHeaders     *DiskSubHeader            // IBT file Sub Headers
-	SessionInfo    *SessionInfoYAML          // IBT file Session Info
-	Vars           *TelemetryVars            // Vars will hold the telemetry data
-	winUtils       *winutils.IRacingWinUtils // WinUtils gives access to the system utilities
+	File Reader // Source of the data
+	Opts Options
+	// TODO: IBTExporter should be an interface because we need to support shm too
+	IBTExporter Writer
+	// IBTExport *os.File // If set, it will export the IBT data to the file
+	// IBTExportPath  string                    // Path for IBT export
+	// YAMLExport     *os.File                  // If set, it will export the session YAML to the file
+	// YAMLExportPath string                    // Path for YAML export
+	winUtils *winutils.IRacingWinUtils // WinUtils gives access to the system utilities
+
+	// TODO: fragment this struct a little bit, for now I want to actually get
+	// stuff done so its enough to work as is
+	// Actual FILE
+	Headers     *TelemetryHeaders // IBT file Headers
+	SubHeaders  *DiskSubHeader    // IBT file Sub Headers
+	SessionInfo *SessionInfoYAML  // IBT file Session Info
+	Vars        *TelemetryVars    // Vars will hold the telemetry data
 }
 
 func (i *IBT) IsConnected() bool {
@@ -58,7 +79,7 @@ func (i *IBT) IsConnected() bool {
 func (i *IBT) exportYAML() error {
 	log := logger.GetInstance()
 
-	file, err := os.OpenFile(i.YAMLExportPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+	file, err := os.OpenFile(i.Opts.SessionInfoExportPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o644)
 	if err != nil {
 		log.Printf("Failed to open file for YAML export: %v\n", err)
 		return fmt.Errorf("failed to open output file for YAML: %v", err)
@@ -79,11 +100,10 @@ func (i *IBT) exportYAML() error {
 func (i *IBT) exportIBT(data []byte, offset int64) error {
 	log := logger.GetInstance()
 
-	_, err := i.IBTExport.WriteAt(data, offset)
-
+	_, err := i.IBTExporter.WriteAt(data, offset)
 	if err != nil {
-		i.IBTExport.Close()
-		i.IBTExport = nil
+		i.IBTExporter.Close()
+		i.IBTExporter = nil
 		log.Println("Won't attempt to export anymore")
 		return err
 	}
@@ -91,61 +111,96 @@ func (i *IBT) exportIBT(data []byte, offset int64) error {
 	return nil
 }
 
-// Init serves to initialize and get a hold of a IBT struct
-// f -> is the source data, pass nil for the SDK to read live data or a
-// *os.File to read from a file
-// exportTelem -> is a string with the path to export the telemetry data, pass
-// an empty string to not export any data
-// exportTelem -> is a string with the path to export the session info data, pass
-// an empty string to not export any data
-func Init(f Reader, exportTelem string, exportYAML string) (*IBT, error) {
-	// log := logger.GetInstance()
-
-	// Read the header of the file
+func (i *IBT) openSource() error {
 	var err error
-	ibt := IBT{
-		File:           f,
-		IBTExport:      nil,
-		IBTExportPath:  exportTelem,
-		YAMLExport:     nil,
-		YAMLExportPath: exportYAML,
-		Vars:           &TelemetryVars{},
-		winUtils:       nil,
-	}
 
-	// If requested to output to a telemetry file
-	if exportTelem != "" {
-		ibt.IBTExport, err = os.OpenFile(exportTelem, os.O_CREATE|os.O_RDWR, 0644)
-		if err != nil {
-			return nil, fmt.Errorf("failed to open ibt export file: %v", err)
-		}
-	}
-
-	if ibt.File == nil {
+	switch i.Opts.SourceType {
+	case SharedMemoryFile:
 		// User is requesting us to read live data - present in the mem map file
-		ibt.File, err = winutils.OpenMemMap(IRSDK_MEMMAPFILENAME, fileMapSize)
+		i.File, err = winutils.OpenMemMap(IRSDK_MEMMAPFILENAME, fileMapSize)
 		if err != nil {
-			return nil, fmt.Errorf("Failed to open memory mapped file: %v", err)
+			return fmt.Errorf("failed to open memory mapped file: %v", err)
 		}
 
 		// To use our windows interface we need to initialize it first
 		// it will return a struct with a pointer to the windows handles
 		// if, for some reason, we need to stub out this to run in on Linux its easier
-		ibt.winUtils, err = winutils.Init()
+		i.winUtils, err = winutils.Init()
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		// We need to open the windows event thing
-		err = ibt.winUtils.OpenWinEvent(IRSDK_DATAVALIDEVENTNAME)
+		err = i.winUtils.OpenWinEvent(IRSDK_DATAVALIDEVENTNAME)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		// We need to open the broadcast channel
-		err = ibt.winUtils.OpenBroadcastChannel(IRSDK_BROADCASTMSGNAME)
+		err = i.winUtils.OpenBroadcastChannel(IRSDK_BROADCASTMSGNAME)
 		if err != nil {
-			return nil, err
+			return err
+		}
+	case IBTFile:
+		i.File, err = os.Open(i.Opts.SourcePath)
+		if err != nil {
+			return fmt.Errorf("failed to open file `%s`: %+v", i.Opts.SourcePath, err)
+		}
+	default:
+		return fmt.Errorf("a source type must be specified")
+	}
+
+	return nil
+}
+
+func (i *IBT) openExporter() error {
+	var err error
+
+	switch i.Opts.IBTExportType {
+	case SharedMemoryFile:
+		// Lets create a shared memory file!
+		shm, err := sharedMem.Create(MEMMAPFILENAME, fileMapSize)
+		if err != nil {
+			return fmt.Errorf("unable to create memory map file: %+v", err)
+		}
+
+		i.IBTExporter = shm
+	case IBTFile:
+		i.IBTExporter, err = os.OpenFile(i.Opts.IBTExportPath, os.O_CREATE|os.O_RDWR, 0o644)
+		if err != nil {
+			return fmt.Errorf("failed to open ibt export file: %v", err)
+		}
+	}
+
+	return nil
+}
+
+// Init serves to initialize and get a hold of a IBT struct
+// Receives an Options struct with the required configurations
+func Init(opts Options) (*IBT, error) {
+	// log := logger.GetInstance()
+
+	// Create our irsdk instance
+	var err error
+	ibt := IBT{
+		Opts:     opts,
+		Vars:     &TelemetryVars{},
+		winUtils: nil,
+	}
+
+	// Setup the source
+	err = ibt.openSource()
+	if err != nil {
+		return nil, err
+	}
+
+	// Setup the IBT data export - can be either shared memory or data file
+	if opts.IBTExport {
+		err = ibt.openExporter()
+		if err != nil {
+			// We log this only, or return some type of message
+			// Set the option to false so we won't export
+			ibt.Opts.IBTExport = false
 		}
 	}
 

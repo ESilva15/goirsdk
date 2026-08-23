@@ -8,9 +8,10 @@ type Msg struct {
 }
 
 const (
+	MEMMAPFILENAME                  = "IRSDKMemMapFileName"
 	SimStatusUrl             string = "http://127.0.0.1:32034/get_sim_status?object=simStatus"
 	IRSDK_DATAVALIDEVENTNAME string = "Local\\IRSDKDataValidEvent"
-	IRSDK_MEMMAPFILENAME     string = "Local\\IRSDKMemMapFileName"
+	IRSDK_MEMMAPFILENAME     string = "Local\\" + MEMMAPFILENAME
 	IRSDK_BROADCASTMSGNAME   string = "IRSDK_BROADCASTMSG"
 	fileMapSize              uint32 = 1164 * 1024
 	connTimeout              int64  = 30
@@ -133,9 +134,11 @@ var (
 	irsdkPitSpeedLimiter     = bitfieldValue{0x10, "irsdk_pitSpeedLimiter"}
 	irsdkRevLimiterActive    = bitfieldValue{0x20, "irsdk_revLimiterActive"}
 	irsdkAbsActive           = bitfieldValue{0x100, "irsdk_absActive"}
-	irsdkEngineWarnings      = []bitfieldValue{irsdkWaterTempWarning, irsdkFuelPressureWarning,
+	irsdkEngineWarnings      = []bitfieldValue{
+		irsdkWaterTempWarning, irsdkFuelPressureWarning,
 		irsdkOilPressureWarning, irsdkEngineStalled, irsdkPitSpeedLimiter, irsdkRevLimiterActive,
-		irsdkAbsActive}
+		irsdkAbsActive,
+	}
 )
 
 // enum irsdk_EngineWarnings

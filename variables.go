@@ -40,11 +40,13 @@ var (
 	}
 )
 
-type IRacingState int
-type VarType struct {
-	Size int    // Size is the var type size in bytes
-	Name string // Name is the irsdk var name
-}
+type (
+	IRacingState int
+	VarType      struct {
+		Size int    // Size is the var type size in bytes
+		Name string // Name is the irsdk var name
+	}
+)
 
 type IBTVar struct {
 	Type        int32
@@ -106,9 +108,10 @@ type varBuffer struct {
 }
 
 type TelemetryVars struct {
-	Tick         int32          // Keeps track of the current data buffer tick
-	RecorderTick int32          // Counts from 0 when creating a telemetry file from a replay or live data
-	Vars         map[string]Var // Variables content
+	Tick         int32 // Keeps track of the current data buffer tick
+	RecorderTick int32 // Counts from 0 when creating a telemetry file from a
+	// replay or live data
+	Vars map[string]Var // Variables content
 }
 
 func (i *IBT) readVariablerHeaders() error {
@@ -123,7 +126,7 @@ func (i *IBT) readVariablerHeaders() error {
 			return err
 		}
 
-		if i.IBTExport != nil {
+		if i.Opts.IBTExport {
 			err = i.exportIBT(rbuf, int64(i.Headers.VarHeaderOffset+k*VarHeaderSize))
 			if err != nil {
 				// Don't outright kill it here - maybe nowhere else
@@ -306,6 +309,7 @@ func (i *IBT) readData(buf []byte) error {
 // Update will read the next data chunk from the telemetry data, works for both the
 // live and offline data
 func (i *IBT) Update(timeout time.Duration) (IRacingState, error) {
+	// This is what happens if we are reading live data
 	if i.winUtils != nil {
 		// Put a way to check if the sim is active here
 		// fmt.Println("NOT CHECKING IF SIM IS ACTIVE - ADD ME")
@@ -344,10 +348,19 @@ func (i *IBT) Update(timeout time.Duration) (IRacingState, error) {
 			return Failed, err
 		}
 
-		if i.IBTExport != nil {
-			err = i.exportIBT(buf, int64(i.Headers.BufOffset+i.Vars.RecorderTick*i.Headers.BufLen))
-			if err != nil {
-				log.Printf("Failed to export live telemetry data: %v", err)
+		if i.Opts.IBTExport {
+			// Dirty attempt at getting this to work to write to a memory mapped file
+			switch i.Opts.IBTExportType {
+			case IBTFile:
+				err = i.exportIBT(buf, int64(i.Headers.BufOffset+i.Vars.RecorderTick*i.Headers.BufLen))
+				if err != nil {
+					log.Printf("Failed to export live telemetry data: %v", err)
+				}
+			case SharedMemoryFile:
+				err = i.exportIBT(buf, int64(i.Headers.BufOffset))
+				if err != nil {
+					log.Printf("Failed to export live telemetry data: %v", err)
+				}
 			}
 		}
 
@@ -363,6 +376,7 @@ func (i *IBT) Update(timeout time.Duration) (IRacingState, error) {
 		// Document why this is here, I don't remember the exact words right now
 		i.Vars.RecorderTick++
 	} else {
+		// This is what happens if we are reading from an .ibt file
 		// This will get the dataframe corresponding to a given tick
 		start := i.Headers.BufOffset + i.Vars.Tick*i.Headers.BufLen
 		buf := make([]byte, i.Headers.BufLen)
@@ -370,10 +384,19 @@ func (i *IBT) Update(timeout time.Duration) (IRacingState, error) {
 
 		// Make this happen in a different thread, or have this send to a queue that has a thread
 		// writing to a file
-		if i.IBTExport != nil {
-			err = i.exportIBT(buf, int64(start))
-			if err != nil {
-				log.Printf("Failed to export offline telemetry data: %v", err)
+		if i.Opts.IBTExport {
+			// Dirty attempt at getting this to work to write to a memory mapped file
+			switch i.Opts.IBTExportType {
+			case IBTFile:
+				err = i.exportIBT(buf, int64(start))
+				if err != nil {
+					log.Printf("Failed to export offline telemetry data: %v", err)
+				}
+			case SharedMemoryFile:
+				err = i.exportIBT(buf, int64(i.Headers.BufOffset))
+				if err != nil {
+					log.Printf("Failed to export live telemetry data: %v", err)
+				}
 			}
 		}
 

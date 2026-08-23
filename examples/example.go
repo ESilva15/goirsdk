@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"log"
-	"os"
 	"time"
 
 	"github.com/ESilva15/goirsdk"
@@ -14,21 +13,23 @@ func msToKph(v float32) int {
 }
 
 func main() {
-	// Open the data source file
-	file, err := os.Open("/path/to/ibtFile")
-	if err != nil {
-		log.Fatalf("Failed to open IBT file: %v", err)
-	}
-
 	// Instantiate our iRacing SDK instance
-	irsdk, err := goirsdk.Init(file, "", "")
+	irsdk, err := goirsdk.Init(goirsdk.Options{
+		SourceType: goirsdk.IBTFile,
+		SourcePath: "../../../testTelemetry/gt3_mustang_bathurst.ibt",
+		// SourcePath:    "./exported.ibt",
+		IBTExportType: goirsdk.SharedMemoryFile,
+		// IBTExportPath: "./exported.ibt",
+		IBTExport: true,
+	})
 	if err != nil {
 		log.Fatalf("Failed to create iRacing interface: %v", err)
 	}
 	defer irsdk.Close()
 
 	// Set up a loop to iterate our data
-	mainLoopTicker := time.NewTicker(time.Second / 60)
+	// TODO: revert this 240 back to 60 because i recorded the thing wrong or whatever
+	mainLoopTicker := time.NewTicker(time.Second / 240)
 	defer mainLoopTicker.Stop()
 
 	for {

@@ -1,11 +1,11 @@
 package goirsdk
 
 import (
-	"github.com/ESilva15/goirsdk/logger"
-
 	"bytes"
 	"encoding/binary"
 	"fmt"
+
+	"github.com/ESilva15/goirsdk/logger"
 )
 
 const (
@@ -28,18 +28,18 @@ func (i *IBT) readSubheader() error {
 	var subheaderRaw [SubHeaderSize]byte
 	_, err := i.File.ReadAt(subheaderRaw[:], HeaderSize)
 	if err != nil {
-		return fmt.Errorf("Failed to read disk subheaders from file: %v", err)
+		return fmt.Errorf("failed to read disk subheaders from file: %v", err)
 	}
 	i.SubHeaders, err = parseTelemetrySubHeader(subheaderRaw)
 	if err != nil {
-		return fmt.Errorf("Unable to parse disk subheaders from file: %v", err)
+		return fmt.Errorf("unable to parse disk subheaders from file: %v", err)
 	}
 
 	// Write to the output file - TODO add the check
-	if i.IBTExport != nil {
-    err = i.exportIBT(subheaderRaw[:], HeaderSize)
+	if i.Opts.IBTExport {
+		err = i.exportIBT(subheaderRaw[:], HeaderSize)
 		if err != nil {
-      log.Printf("Failed to export subheaders: %v\n", err)
+			log.Printf("failed to export subheaders: %v\n", err)
 		}
 	}
 

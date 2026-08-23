@@ -1,5 +1,4 @@
-//go:build windows && cgo
-// +build windows,cgo
+// go:build windows
 
 package winutils
 
@@ -16,13 +15,11 @@ const (
 	WAIT_TIMEOUT  = 258
 )
 
-var (
-	once sync.Once
-)
+var once sync.Once
 
 type utils struct {
 	user32DLL     *windows.LazyDLL
-	wEvent        *windows.Handle
+	wEvent        windows.Handle
 	wBroadcastChn uintptr
 }
 
@@ -34,7 +31,7 @@ func newUtils() (*utils, error) {
 }
 
 func (u *utils) Close() {
-	closeEvent(u.wEvent)
+	closeEvent(&u.wEvent)
 	// Do we need to unload the user32DLL ???
 	// Do we need to close the broadcast channel ???
 }
@@ -50,7 +47,7 @@ func (u *utils) OpenEvent(eventName string) error {
 	if err != nil {
 		return err
 	}
-	u.wEvent = &event
+	u.wEvent = event
 
 	return nil
 }
@@ -90,7 +87,7 @@ func (u *utils) CheckValidDataEvent(timeout time.Duration) bool {
 	t0 := time.Now().UnixNano()
 	timeoutInt := uint32(timeout / time.Millisecond)
 
-	result, err := windows.WaitForSingleObject(*u.wEvent, timeoutInt)
+	result, err := windows.WaitForSingleObject(u.wEvent, timeoutInt)
 	if err != nil {
 		remaining := timeoutInt - uint32((time.Now().UnixNano()-t0)/1000000)
 		if remaining > 0 {
