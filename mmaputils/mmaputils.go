@@ -2,10 +2,9 @@
 // is interface some windows stuff that we need for the:
 // - Broadcast Channel
 // - Valid Data Event windows thing
-package winutils
+package mmaputils
 
 import (
-	"github.com/ESilva15/goirsdk/sharedMem"
 	"io"
 	"time"
 )
@@ -32,23 +31,12 @@ func (u *IRacingWinUtils) Close() {
 	u.Utils.Close()
 }
 
-// OpenMemMap returns a Reader interface that can be used to read the data
-// No need to encapsulate it
-func OpenMemMap(path string, size uint32) (Reader, error) {
-	file, err := sharedMem.Open(path, size)
-	if err != nil {
-		return nil, err
-	}
-
-	return file, nil
-}
-
 // OpenWinEvent will open the named windows event
 func (u *IRacingWinUtils) OpenWinEvent(name string) error {
 	return u.Utils.OpenEvent(name)
 }
 
-// OpenWinEvent will open the broadcast channel
+// OpenBroadcastChannel will open the broadcast channel
 func (u *IRacingWinUtils) OpenBroadcastChannel(name string) error {
 	return u.Utils.OpenBroadcastChannel(name)
 }

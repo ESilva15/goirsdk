@@ -30,7 +30,7 @@ func lapTimeRepresentation(t float32) string {
 }
 
 func TestFunctionality(t *testing.T) {
-	input, err := os.Open("../testTelemetry/supercars_race_watkins_glenn.ibt")
+	input, err := os.Open("../../testTelemetry/supercars_race_watkins_glenn.ibt")
 	if err != nil {
 		t.Fatal("Was unable to prepare telemetry file for testing.")
 	}
@@ -62,7 +62,7 @@ func TestFunctionality(t *testing.T) {
 		// driversBehind := i.Vars.Vars["CarIdxF2Time"].Value.([]float32)
 
 		drivers := i.SessionInfo.DriverInfo.Drivers
-    myIdx := i.SessionInfo.DriverInfo.DriverCarIdx
+		myIdx := i.SessionInfo.DriverInfo.DriverCarIdx
 
 		standings := make([]StandingsLine, len(drivers))
 
@@ -90,7 +90,7 @@ func TestFunctionality(t *testing.T) {
 			return standings[i].LapPct >= standings[j].LapPct
 		})
 
-    fmt.Printf("%v\n", driversEstTime)
+		fmt.Printf("%v\n", driversEstTime)
 		// for p, v := range standings {
 		// 	fmt.Printf("[%2d] %-30s %13f %13f\n",
 		// 		p+1, v.DriverName, v.LapPct, driversEstTime[p] - driversEstTime[myIdx])

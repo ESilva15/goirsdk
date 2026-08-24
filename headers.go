@@ -1,11 +1,11 @@
 package goirsdk
 
 import (
-	"github.com/ESilva15/goirsdk/logger"
-
 	"bytes"
 	"encoding/binary"
 	"fmt"
+
+	"github.com/ESilva15/goirsdk/logger"
 )
 
 const (
@@ -15,30 +15,19 @@ const (
 
 // TelemetryHeaders struct to hold an IBT file's headers
 type TelemetryHeaders struct {
-	Version int32
-	// Status of 1 indicates a completed session and status of 0 a live session
-	Status int32
-	// TickRate indicates the frequency of writes (usually 60)
-	TickRate int32
-	// SessionInfoUpdate indicates the number of times the SessionInfo was
+	Version           int32
+	Status            int32 // Status of 1 indicates a completed session and status of 0 a live session
+	TickRate          int32 // TickRate indicates the frequency of writes (usually 60)
+	SessionInfoUpdate int32 // SessionInfoUpdate indicates the number of times the SessionInfo was
 	// updated. 0 for finished sessions and >1 for active sessions
-	SessionInfoUpdate int32
-	// SessionInfoLength is the length of the session info buffer
-	SessionInfoLength int32
-	// SessionInfoOffset is the offset of the session info in the buffer
-	SessionInfoOffset int32
-	// NumVars is the number of variables in each input
-	NumVars int32
-	// VarHeaderOffset is the offset of the VarHeader
-	VarHeaderOffset int32
-	// NumBuf will be 1 for static files and 3 for live telemetry files
-	NumBuf int32
-	// BufLen is the length for parsing VarHeader values
-	BufLen int32
-	// Padding
-	Padding [12]byte
-	// I still don't know what this is:
-	BufOffset int32
+	SessionInfoLength int32    // SessionInfoLength is the length of the session info buffer
+	SessionInfoOffset int32    // SessionInfoOffset is the offset of the session info in the buffer
+	NumVars           int32    // NumVars is the number of variables in each input
+	VarHeaderOffset   int32    // VarHeaderOffset is the offset of the VarHeader
+	NumBuf            int32    // NumBuf will be 1 for static files and 3 for live telemetry files
+	BufLen            int32    // BufLen is the length for parsing VarHeader values
+	Padding           [12]byte // Padding
+	BufOffset         int32    // I still don't know what this is:
 }
 
 // readHeader will read the header out of the telemetry data
@@ -48,18 +37,18 @@ func (i *IBT) readHeader() error {
 	var headerRaw [FileHeaderSize]byte
 	_, err := i.File.ReadAt(headerRaw[:], 0)
 	if err != nil {
-		return fmt.Errorf("Failed to read headers from file: %v", err)
+		return fmt.Errorf("failed to read headers from file: %v", err)
 	}
 	i.Headers, err = parseTelemetryHeader(headerRaw)
 	if err != nil {
-		return fmt.Errorf("Unable to read headers from file: %v", err)
+		return fmt.Errorf("unable to read headers from file: %v", err)
 	}
 
 	// Write to the output file - TODO: this should only write if necessary
-	if i.IBTExport != nil {
-    err = i.exportIBT(headerRaw[:], 0)
+	if i.Opts.IBTExport {
+		err = i.exportIBT(headerRaw[:], 0)
 		if err != nil {
-      log.Printf("Failed to export headers: %v\n", err)
+			log.Printf("Failed to export headers: %v\n", err)
 		}
 	}
 

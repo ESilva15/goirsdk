@@ -1,12 +1,12 @@
 package goirsdk
 
 import (
-	"github.com/ESilva15/goirsdk/logger"
-
 	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
+
+	"github.com/ESilva15/goirsdk/logger"
 
 	"golang.org/x/text/encoding/charmap"
 	"gopkg.in/yaml.v3"
@@ -321,7 +321,7 @@ func (i *IBT) readSessionInfo() error {
 	}
 
 	// Write to the output file
-	if i.IBTExport != nil {
+	if i.Opts.IBTExport {
 		err := i.exportIBT(sessionInfoStringRaw[:], int64(i.Headers.SessionInfoOffset))
 		if err != nil {
 			log.Printf("Failed to export offline telemetry data: %v", err)
@@ -334,7 +334,7 @@ func (i *IBT) readSessionInfo() error {
 	}
 
 	// Write to YAML output file
-	if i.YAMLExportPath != "" {
+	if i.Opts.SessionInfoExport {
 		err := i.exportYAML()
 		if err != nil {
 			log.Printf("Failed to export YAML string: %v\n", err)
