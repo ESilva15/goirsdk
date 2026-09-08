@@ -20,7 +20,6 @@ const (
 	IRSDK_BROADCASTMSGNAME   string = "IRSDK_BROADCASTMSG"
 	fileMapSize              uint32 = 1164 * 1024
 	connTimeout              int64  = 30
-	stConnected              int    = 1
 )
 
 const (
@@ -116,6 +115,22 @@ const (
 	csFocusAtExiting  int = -1
 	csFocusAtDriver   int = 0 // ctFocusAtDriver + car number...
 )
+
+// StatusField - START
+const (
+	irsdk_stConnected = 0x01
+)
+
+func (i *IBT) SessionStatusConnected() bool {
+	return i.Headers.Status == irsdk_stConnected
+}
+
+// NOTE: move this away from here
+// func (i *IBT) SessionTimedOut() bool {
+// 	return sdk.lastValidData+connTimeout > time.Now().Unix()
+// }
+
+// StatusField - END
 
 // Camera positions
 type bitfieldValue struct {

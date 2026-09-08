@@ -59,16 +59,19 @@ type IBT struct {
 }
 
 func (i *IBT) IsConnected() bool {
-	if i.Headers != nil {
-		if sessionStatusOK(int(i.Headers.Status)) {
-			return true
-		}
-		// if sessionStatusOK(int(i.Headers.Status)) && (sdk.lastValidData+connTimeout > time.Now().Unix()) {
-		// 	return true
-		// }
+	if i.Headers == nil {
+		return false
 	}
 
-	return false
+	if !i.SessionStatusConnected() {
+		return false
+	}
+
+	if i.SessionStateInvalid() {
+		return false
+	}
+
+	return true
 }
 
 func (i *IBT) exportYAML() error {
