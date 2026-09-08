@@ -280,19 +280,15 @@ func (i *IBT) SessionStateInvalid() bool {
 		return true
 	}
 
-	value, ok := val.Value.(string)
+	value, ok := val.Value.(int)
 	if !ok {
 		return true
 	}
 
-	bitfield, err := strconv.ParseInt(value, 0, 64)
-	if err != nil {
-		return true
-	}
-
-	return bitfield == irsdk_StateInvalid
+	return value == irsdk_StateInvalid
 }
 
+// BUG: Need to fix all of these functions, they are all wrong
 func (i *IBT) SessionStateGetInCar() bool {
 	val, ok := i.Vars.Vars["SessionState"]
 	if !ok {
