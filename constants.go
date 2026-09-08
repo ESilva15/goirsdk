@@ -2,7 +2,6 @@ package goirsdk
 
 import (
 	"log"
-	"strconv"
 )
 
 type Msg struct {
@@ -141,124 +140,55 @@ type bitfieldValue struct {
 // EngineWarnings - Start
 // TODO: wtf
 var (
-	irsdk_WaterTempWarning    int64 = 0x00000001
-	irsdk_FuelPressureWarning int64 = 0x00000002
-	irsdk_OilPressureWarning  int64 = 0x00000004
-	irsdk_EngineStalled       int64 = 0x00000008
-	irsdk_PitSpeedLimiter     int64 = 0x00000010
-	irsdk_RevLimiterActive    int64 = 0x00000020
-	irsdk_AbsActive           int64 = 0x00000100
-	// DEPRECATE THESE ↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓
-	irsdkWaterTempWarning    = bitfieldValue{0x01, "irsdk_waterTempWarning"}
-	irsdkFuelPressureWarning = bitfieldValue{0x02, "irsdk_fueldPressureWarning"}
-	irsdkOilPressureWarning  = bitfieldValue{0x04, "irsdk_oilPressureWarning"}
-	irsdkEngineStalled       = bitfieldValue{0x08, "irsdk_engineStalled"}
-	irsdkPitSpeedLimiter     = bitfieldValue{0x10, "irsdk_pitSpeedLimiter"}
-	irsdkRevLimiterActive    = bitfieldValue{0x20, "irsdk_revLimiterActive"}
-	irsdkAbsActive           = bitfieldValue{0x100, "irsdk_absActive"}
-	irsdkEngineWarnings      = []bitfieldValue{
-		irsdkWaterTempWarning, irsdkFuelPressureWarning,
-		irsdkOilPressureWarning, irsdkEngineStalled, irsdkPitSpeedLimiter, irsdkRevLimiterActive,
-		irsdkAbsActive,
-	}
+	irsdk_WaterTempWarning    = 0x00000001
+	irsdk_FuelPressureWarning = 0x00000002
+	irsdk_OilPressureWarning  = 0x00000004
+	irsdk_EngineStalled       = 0x00000008
+	irsdk_PitSpeedLimiter     = 0x00000010
+	irsdk_RevLimiterActive    = 0x00000020
+	irsdk_AbsActive           = 0x00000100
 )
 
-func (i *IBT) WaterTempWarning() bool {
+func (i *IBT) checkEngineWarningsBitfield(field int) bool {
 	val, ok := i.Vars.Vars["EngineWarnings"]
 	if !ok {
 		log.Fatal("no EngineWarnings")
 	}
 
-	bitfield, err := strconv.ParseInt(val.Value.(string), 0, 64)
-	if err != nil {
-		log.Fatal("unable to get EngineWarnings: " + err.Error())
+	bitfield, ok := val.Value.(int)
+	if !ok {
+		log.Fatalf("unable to typecast EngineWarnings: %+v", val.Value)
 	}
 
-	return bitfield&irsdk_WaterTempWarning != 0
+	return bitfield&field != 0
+}
+
+func (i *IBT) WaterTempWarning() bool {
+	return i.checkEngineWarningsBitfield(irsdk_WaterTempWarning)
 }
 
 func (i *IBT) FuelPressureWarning() bool {
-	val, ok := i.Vars.Vars["EngineWarnings"]
-	if !ok {
-		log.Fatal("no EngineWarnings")
-	}
-
-	bitfield, err := strconv.ParseInt(val.Value.(string), 0, 64)
-	if err != nil {
-		log.Fatal("unable to get EngineWarnings: " + err.Error())
-	}
-
-	return bitfield&irsdk_FuelPressureWarning != 0
+	return i.checkEngineWarningsBitfield(irsdk_FuelPressureWarning)
 }
 
 func (i *IBT) OilPressureWarning() bool {
-	val, ok := i.Vars.Vars["EngineWarnings"]
-	if !ok {
-		log.Fatal("no EngineWarnings")
-	}
-
-	bitfield, err := strconv.ParseInt(val.Value.(string), 0, 64)
-	if err != nil {
-		log.Fatal("unable to get EngineWarnings: " + err.Error())
-	}
-
-	return bitfield&irsdk_OilPressureWarning != 0
+	return i.checkEngineWarningsBitfield(irsdk_OilPressureWarning)
 }
 
 func (i *IBT) EngineStalled() bool {
-	val, ok := i.Vars.Vars["EngineWarnings"]
-	if !ok {
-		log.Fatal("no EngineWarnings")
-	}
-
-	bitfield, err := strconv.ParseInt(val.Value.(string), 0, 64)
-	if err != nil {
-		log.Fatal("unable to get EngineWarnings: " + err.Error())
-	}
-
-	return bitfield&irsdk_EngineStalled != 0
+	return i.checkEngineWarningsBitfield(irsdk_EngineStalled)
 }
 
 func (i *IBT) PitSpeedLimiter() bool {
-	val, ok := i.Vars.Vars["EngineWarnings"]
-	if !ok {
-		log.Fatal("no EngineWarnings")
-	}
-
-	bitfield, err := strconv.ParseInt(val.Value.(string), 0, 64)
-	if err != nil {
-		log.Fatal("unable to get EngineWarnings: " + err.Error())
-	}
-
-	return bitfield&irsdk_PitSpeedLimiter != 0
+	return i.checkEngineWarningsBitfield(irsdk_PitSpeedLimiter)
 }
 
 func (i *IBT) RevLimiterActive() bool {
-	val, ok := i.Vars.Vars["EngineWarnings"]
-	if !ok {
-		log.Fatal("no EngineWarnings")
-	}
-
-	bitfield, err := strconv.ParseInt(val.Value.(string), 0, 64)
-	if err != nil {
-		log.Fatal("unable to get EngineWarnings: " + err.Error())
-	}
-
-	return bitfield&irsdk_RevLimiterActive != 0
+	return i.checkEngineWarningsBitfield(irsdk_RevLimiterActive)
 }
 
 func (i *IBT) AbsActive() bool {
-	val, ok := i.Vars.Vars["EngineWarnings"]
-	if !ok {
-		log.Fatal("no EngineWarnings")
-	}
-
-	bitfield, err := strconv.ParseInt(val.Value.(string), 0, 64)
-	if err != nil {
-		log.Fatal("unable to get EngineWarnings: " + err.Error())
-	}
-
-	return bitfield&irsdk_AbsActive != 0
+	return i.checkEngineWarningsBitfield(irsdk_AbsActive)
 }
 
 // EngineWarnings - END
@@ -274,7 +204,7 @@ const (
 	irsdk_StateCoolDown   = 0x06
 )
 
-func (i *IBT) SessionStateInvalid() bool {
+func (i *IBT) checkSessionStateField(field int) bool {
 	val, ok := i.Vars.Vars["SessionState"]
 	if !ok {
 		return true
@@ -285,92 +215,36 @@ func (i *IBT) SessionStateInvalid() bool {
 		return true
 	}
 
-	return value == irsdk_StateInvalid
+	return value == field
+}
+
+func (i *IBT) SessionStateInvalid() bool {
+	return i.checkSessionStateField(irsdk_StateInvalid)
 }
 
 // BUG: Need to fix all of these functions, they are all wrong
 func (i *IBT) SessionStateGetInCar() bool {
-	val, ok := i.Vars.Vars["SessionState"]
-	if !ok {
-		log.Fatal("no SessionState")
-	}
-
-	bitfield, err := strconv.ParseInt(val.Value.(string), 0, 64)
-	if err != nil {
-		log.Fatal("unable to get SessionState: " + err.Error())
-	}
-
-	return bitfield == irsdk_StateGetInCar
+	return i.checkSessionStateField(irsdk_StateGetInCar)
 }
 
 func (i *IBT) SessionStateWarmup() bool {
-	val, ok := i.Vars.Vars["SessionState"]
-	if !ok {
-		log.Fatal("no SessionState")
-	}
-
-	bitfield, err := strconv.ParseInt(val.Value.(string), 0, 64)
-	if err != nil {
-		log.Fatal("unable to get SessionState: " + err.Error())
-	}
-
-	return bitfield == irsdk_StateWarmup
+	return i.checkSessionStateField(irsdk_StateWarmup)
 }
 
 func (i *IBT) SessionStateParadeLaps() bool {
-	val, ok := i.Vars.Vars["SessionState"]
-	if !ok {
-		log.Fatal("no SessionState")
-	}
-
-	bitfield, err := strconv.ParseInt(val.Value.(string), 0, 64)
-	if err != nil {
-		log.Fatal("unable to get SessionState: " + err.Error())
-	}
-
-	return bitfield == irsdk_StateParadeLaps
+	return i.checkSessionStateField(irsdk_StateParadeLaps)
 }
 
 func (i *IBT) SessionStateRacing() bool {
-	val, ok := i.Vars.Vars["SessionState"]
-	if !ok {
-		log.Fatal("no SessionState")
-	}
-
-	bitfield, err := strconv.ParseInt(val.Value.(string), 0, 64)
-	if err != nil {
-		log.Fatal("unable to get SessionState: " + err.Error())
-	}
-
-	return bitfield == irsdk_StateRacing
+	return i.checkSessionStateField(irsdk_StateRacing)
 }
 
 func (i *IBT) SessionStateCheckered() bool {
-	val, ok := i.Vars.Vars["SessionState"]
-	if !ok {
-		log.Fatal("no SessionState")
-	}
-
-	bitfield, err := strconv.ParseInt(val.Value.(string), 0, 64)
-	if err != nil {
-		log.Fatal("unable to get SessionState: " + err.Error())
-	}
-
-	return bitfield == irsdk_StateCheckered
+	return i.checkSessionStateField(irsdk_StateCheckered)
 }
 
 func (i *IBT) SessionStateCoolDown() bool {
-	val, ok := i.Vars.Vars["SessionState"]
-	if !ok {
-		log.Fatal("no SessionState")
-	}
-
-	bitfield, err := strconv.ParseInt(val.Value.(string), 0, 64)
-	if err != nil {
-		log.Fatal("unable to get SessionState: " + err.Error())
-	}
-
-	return bitfield == irsdk_StateCoolDown
+	return i.checkSessionStateField(irsdk_StateCoolDown)
 }
 
 func SessionStateToString(state int) string {
@@ -652,175 +526,79 @@ func CameraStateToString(state int) string {
 // PitSvFlags -- Start
 const (
 	// Tires
-	irsdk_LFTireChange = 0x00000001
-	irsdk_RFTireChange = 0x00000002
-	irsdk_LRTireChange = 0x00000004
-	irsdk_RRTireChange = 0x00000008
+	irsdk_LFTireChange uint32 = 0x00000001
+	irsdk_RFTireChange uint32 = 0x00000002
+	irsdk_LRTireChange uint32 = 0x00000004
+	irsdk_RRTireChange uint32 = 0x00000008
 	// Fuel
-	irsdk_FuelFill = 0x00000010
+	irsdk_FuelFill uint32 = 0x00000010
 
-	irsdk_WindshieldTearoff = 0x00000020
-	irsdk_FastRepair        = 0x00000040
+	irsdk_WindshieldTearoff uint32 = 0x00000020
+	irsdk_FastRepair        uint32 = 0x00000040
 
 	// Other pit service request flags
-	irsdk_ClearTires = 0x00000080 // Uncheck tire change
-	irsdk_ClearWS    = 0x00000100 // Uncheck windshield tearoff
-	irsdk_ClearFR    = 0x00000200 // Uncheck FastRepair
-	irsdk_ClearFuel  = 0x00000400 // Uncheck refuelling
+	irsdk_ClearTires uint32 = 0x00000080 // Uncheck tire change
+	irsdk_ClearWS    uint32 = 0x00000100 // Uncheck windshield tearoff
+	irsdk_ClearFR    uint32 = 0x00000200 // Uncheck FastRepair
+	irsdk_ClearFuel  uint32 = 0x00000400 // Uncheck refuelling
 )
 
-func (i *IBT) LFTireChange() bool {
+func (i *IBT) checkPitSvFlags(field uint32) bool {
 	val, ok := i.Vars.Vars["PitSvFlags"]
 	if !ok {
 		log.Fatal("no PitSvFlags")
 	}
 
-	bitfield, err := strconv.ParseInt(val.Value.(string), 0, 64)
-	if err != nil {
-		log.Fatal("unable to get PitSvFlags: " + err.Error())
+	bitfield, ok := val.Value.(uint32)
+	if !ok {
+		log.Fatal("unable to get PitSvFlags: %+v", val)
 	}
 
-	return bitfield&irsdk_LFTireChange != 0
+	return bitfield&field != 0
+}
+
+func (i *IBT) LFTireChange() bool {
+	return i.checkPitSvFlags(irsdk_LFTireChange)
 }
 
 func (i *IBT) RFTireChange() bool {
-	val, ok := i.Vars.Vars["PitSvFlags"]
-	if !ok {
-		log.Fatal("no PitSvFlags")
-	}
-
-	bitfield, err := strconv.ParseInt(val.Value.(string), 0, 64)
-	if err != nil {
-		log.Fatal("unable to get PitSvFlags: " + err.Error())
-	}
-
-	return bitfield&irsdk_RFTireChange != 0
+	return i.checkPitSvFlags(irsdk_RFTireChange)
 }
 
 func (i *IBT) LRTireChange() bool {
-	val, ok := i.Vars.Vars["PitSvFlags"]
-	if !ok {
-		log.Fatal("no PitSvFlags")
-	}
-
-	bitfield, err := strconv.ParseInt(val.Value.(string), 0, 64)
-	if err != nil {
-		log.Fatal("unable to get PitSvFlags: " + err.Error())
-	}
-
-	return bitfield&irsdk_LRTireChange != 0
+	return i.checkPitSvFlags(irsdk_LRTireChange)
 }
 
 func (i *IBT) RRTireChange() bool {
-	val, ok := i.Vars.Vars["PitSvFlags"]
-	if !ok {
-		log.Fatal("no PitSvFlags")
-	}
-
-	bitfield, err := strconv.ParseInt(val.Value.(string), 0, 64)
-	if err != nil {
-		log.Fatal("unable to get PitSvFlags: " + err.Error())
-	}
-
-	return bitfield&irsdk_RRTireChange != 0
+	return i.checkPitSvFlags(irsdk_RRTireChange)
 }
 
 func (i *IBT) FuelFill() bool {
-	val, ok := i.Vars.Vars["PitSvFlags"]
-	if !ok {
-		log.Fatal("no PitSvFlags")
-	}
-
-	bitfield, err := strconv.ParseInt(val.Value.(string), 0, 64)
-	if err != nil {
-		log.Fatal("unable to get PitSvFlags: " + err.Error())
-	}
-
-	return bitfield&irsdk_FuelFill != 0
+	return i.checkPitSvFlags(irsdk_FuelFill)
 }
 
 func (i *IBT) WindshieldTearoff() bool {
-	val, ok := i.Vars.Vars["PitSvFlags"]
-	if !ok {
-		log.Fatal("no PitSvFlags")
-	}
-
-	bitfield, err := strconv.ParseInt(val.Value.(string), 0, 64)
-	if err != nil {
-		log.Fatal("unable to get PitSvFlags: " + err.Error())
-	}
-
-	return bitfield&irsdk_WindshieldTearoff != 0
+	return i.checkPitSvFlags(irsdk_WindshieldTearoff)
 }
 
 func (i *IBT) FastRepair() bool {
-	val, ok := i.Vars.Vars["PitSvFlags"]
-	if !ok {
-		log.Fatal("no PitSvFlags")
-	}
-
-	bitfield, err := strconv.ParseInt(val.Value.(string), 0, 64)
-	if err != nil {
-		log.Fatal("unable to get PitSvFlags: " + err.Error())
-	}
-
-	return bitfield&irsdk_FastRepair != 0
+	return i.checkPitSvFlags(irsdk_FastRepair)
 }
 
 func (i *IBT) ClearTires() bool {
-	val, ok := i.Vars.Vars["PitSvFlags"]
-	if !ok {
-		log.Fatal("no PitSvFlags")
-	}
-
-	bitfield, err := strconv.ParseInt(val.Value.(string), 0, 64)
-	if err != nil {
-		log.Fatal("unable to get PitSvFlags: " + err.Error())
-	}
-
-	return bitfield&irsdk_ClearTires != 0
+	return i.checkPitSvFlags(irsdk_ClearTires)
 }
 
 func (i *IBT) ClearWS() bool {
-	val, ok := i.Vars.Vars["PitSvFlags"]
-	if !ok {
-		log.Fatal("no PitSvFlags")
-	}
-
-	bitfield, err := strconv.ParseInt(val.Value.(string), 0, 64)
-	if err != nil {
-		log.Fatal("unable to get PitSvFlags: " + err.Error())
-	}
-
-	return bitfield&irsdk_ClearWS != 0
+	return i.checkPitSvFlags(irsdk_ClearWS)
 }
 
 func (i *IBT) ClearFR() bool {
-	val, ok := i.Vars.Vars["PitSvFlags"]
-	if !ok {
-		log.Fatal("no PitSvFlags")
-	}
-
-	bitfield, err := strconv.ParseInt(val.Value.(string), 0, 64)
-	if err != nil {
-		log.Fatal("unable to get PitSvFlags: " + err.Error())
-	}
-
-	return bitfield&irsdk_ClearFR != 0
+	return i.checkPitSvFlags(irsdk_ClearFR)
 }
 
 func (i *IBT) ClearFuel() bool {
-	val, ok := i.Vars.Vars["PitSvFlags"]
-	if !ok {
-		log.Fatal("no PitSvFlags")
-	}
-
-	bitfield, err := strconv.ParseInt(val.Value.(string), 0, 64)
-	if err != nil {
-		log.Fatal("unable to get PitSvFlags: " + err.Error())
-	}
-
-	return bitfield&irsdk_ClearFuel != 0
+	return i.checkPitSvFlags(irsdk_ClearFuel)
 }
 
 // PitSvFlags -- End
