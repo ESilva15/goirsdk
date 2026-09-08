@@ -248,7 +248,7 @@ func (i *IBT) AbsActive() bool {
 
 // EngineWarnings - END
 
-// SessionState const
+// SessionState - START
 const (
 	irsdk_StateInvalid    = 0x00
 	irsdk_StateGetInCar   = 0x01
@@ -258,6 +258,104 @@ const (
 	irsdk_StateCheckered  = 0x05
 	irsdk_StateCoolDown   = 0x06
 )
+
+func (i *IBT) SessionStateInvalid() bool {
+	val, ok := i.Vars.Vars["SessionState"]
+	if !ok {
+		log.Fatal("no SessionState")
+	}
+
+	bitfield, err := strconv.ParseInt(val.Value.(string), 0, 64)
+	if err != nil {
+		log.Fatal("unable to get SessionState: " + err.Error())
+	}
+
+	return bitfield == irsdk_StateInvalid
+}
+
+func (i *IBT) SessionStateGetInCar() bool {
+	val, ok := i.Vars.Vars["SessionState"]
+	if !ok {
+		log.Fatal("no SessionState")
+	}
+
+	bitfield, err := strconv.ParseInt(val.Value.(string), 0, 64)
+	if err != nil {
+		log.Fatal("unable to get SessionState: " + err.Error())
+	}
+
+	return bitfield == irsdk_StateGetInCar
+}
+
+func (i *IBT) SessionStateWarmup() bool {
+	val, ok := i.Vars.Vars["SessionState"]
+	if !ok {
+		log.Fatal("no SessionState")
+	}
+
+	bitfield, err := strconv.ParseInt(val.Value.(string), 0, 64)
+	if err != nil {
+		log.Fatal("unable to get SessionState: " + err.Error())
+	}
+
+	return bitfield == irsdk_StateWarmup
+}
+
+func (i *IBT) SessionStateParadeLaps() bool {
+	val, ok := i.Vars.Vars["SessionState"]
+	if !ok {
+		log.Fatal("no SessionState")
+	}
+
+	bitfield, err := strconv.ParseInt(val.Value.(string), 0, 64)
+	if err != nil {
+		log.Fatal("unable to get SessionState: " + err.Error())
+	}
+
+	return bitfield == irsdk_StateParadeLaps
+}
+
+func (i *IBT) SessionStateRacing() bool {
+	val, ok := i.Vars.Vars["SessionState"]
+	if !ok {
+		log.Fatal("no SessionState")
+	}
+
+	bitfield, err := strconv.ParseInt(val.Value.(string), 0, 64)
+	if err != nil {
+		log.Fatal("unable to get SessionState: " + err.Error())
+	}
+
+	return bitfield == irsdk_StateRacing
+}
+
+func (i *IBT) SessionStateCheckered() bool {
+	val, ok := i.Vars.Vars["SessionState"]
+	if !ok {
+		log.Fatal("no SessionState")
+	}
+
+	bitfield, err := strconv.ParseInt(val.Value.(string), 0, 64)
+	if err != nil {
+		log.Fatal("unable to get SessionState: " + err.Error())
+	}
+
+	return bitfield == irsdk_StateCheckered
+}
+
+func (i *IBT) SessionStateCoolDown() bool {
+	val, ok := i.Vars.Vars["SessionState"]
+	if !ok {
+		log.Fatal("no SessionState")
+	}
+
+	bitfield, err := strconv.ParseInt(val.Value.(string), 0, 64)
+	if err != nil {
+		log.Fatal("unable to get SessionState: " + err.Error())
+	}
+
+	return bitfield == irsdk_StateCoolDown
+}
 
 func SessionStateToString(state int) string {
 	switch state {
@@ -279,6 +377,8 @@ func SessionStateToString(state int) string {
 		return "UknownSessionState"
 	}
 }
+
+// SessionState - END
 
 // TrkLoc const
 const (
