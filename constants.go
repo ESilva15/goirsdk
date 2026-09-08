@@ -277,12 +277,12 @@ const (
 func (i *IBT) SessionStateInvalid() bool {
 	val, ok := i.Vars.Vars["SessionState"]
 	if !ok {
-		log.Fatal("no SessionState")
+		return true
 	}
 
 	bitfield, err := strconv.ParseInt(val.Value.(string), 0, 64)
 	if err != nil {
-		log.Fatal("unable to get SessionState: " + err.Error())
+		return true
 	}
 
 	return bitfield == irsdk_StateInvalid
