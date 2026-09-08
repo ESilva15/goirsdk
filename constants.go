@@ -280,7 +280,12 @@ func (i *IBT) SessionStateInvalid() bool {
 		return true
 	}
 
-	bitfield, err := strconv.ParseInt(val.Value.(string), 0, 64)
+	value, ok := val.Value.(string)
+	if !ok {
+		return true
+	}
+
+	bitfield, err := strconv.ParseInt(value, 0, 64)
 	if err != nil {
 		return true
 	}
