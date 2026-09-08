@@ -44,15 +44,10 @@ type Options struct {
 
 // IBT struct will hold the relevant data for a given IBT file
 type IBT struct {
-	File Reader // Source of the data
-	Opts Options
-	// TODO: IBTExporter should be an interface because we need to support shm too
+	File        Reader // Source of the data
+	Opts        Options
 	IBTExporter Writer
-	// IBTExport *os.File // If set, it will export the IBT data to the file
-	// IBTExportPath  string                    // Path for IBT export
-	// YAMLExport     *os.File                  // If set, it will export the session YAML to the file
-	// YAMLExportPath string                    // Path for YAML export
-	winUtils *mmaputils.IRacingWinUtils // WinUtils gives access to the system utilities
+	winUtils    *mmaputils.IRacingWinUtils // WinUtils gives access to the system utilities
 
 	// TODO: fragment this struct a little bit, for now I want to actually get
 	// stuff done so its enough to work as is
@@ -230,6 +225,10 @@ func Init(opts Options) (*IBT, error) {
 	}
 
 	return &ibt, nil
+}
+
+func (i *IBT) ListVariables() map[string]Var {
+	return i.Vars.Vars
 }
 
 // Close cleans up our irsdk instance

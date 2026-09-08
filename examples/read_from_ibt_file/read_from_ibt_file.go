@@ -16,7 +16,7 @@ func main() {
 	// Instantiate our iRacing SDK instance
 	irsdk, err := goirsdk.Init(goirsdk.Options{
 		SourceType:    goirsdk.IBTFile,
-		SourcePath:    "../../../../testTelemetry/gt3_mustang_bathurst.ibt",
+		SourcePath:    "../../../../testTelemetry/mx5_2016Okayama_full_2024_10_19_22_02_12.ibt",
 		IBTExportType: goirsdk.SharedMemoryFile,
 		IBTExportPath: "./exported.ibt",
 		IBTExport:     true,
@@ -57,9 +57,35 @@ func main() {
 		gear := int32(irsdk.Vars.Vars["Gear"].Value.(int))
 		rpm := int32(irsdk.Vars.Vars["RPM"].Value.(float32))
 		speed := int32(msToKph(irsdk.Vars.Vars["Speed"].Value.(float32)))
+		sessionState := irsdk.Vars.Vars["SessionState"].Value.(int)
+		trkloc := irsdk.Vars.Vars["PlayerTrackSurface"].Value.(int)
+		trksurf := irsdk.Vars.Vars["PlayerTrackSurfaceMaterial"].Value.(int)
+		pitsvflags := irsdk.Vars.Vars["PitSvFlags"].Value.(string)
 
 		fmt.Printf("\033[?25l\033[2J\033[H")
-		fmt.Printf("Gear: %d, RPM: %d, Speed: %d", gear, rpm, speed)
+		fmt.Printf("Gear: %d, RPM: %d, Speed: %d\n", gear, rpm, speed)
+		fmt.Printf("SessionState: %s\n", goirsdk.SessionStateToString(sessionState))
+		fmt.Printf("TrkLoc: %s\n", goirsdk.TrkLocToString(trkloc))
+		fmt.Printf("TrkSurf: %s\n", goirsdk.TrkSurfToString(trksurf))
+		fmt.Printf("PitSvFlags: %s\n", pitsvflags)
+		fmt.Printf("    FL  FR\n")
+		fmt.Printf("    %t  %t\n", irsdk.LFTireChange(), irsdk.RFTireChange())
+		fmt.Printf("\n")
+		fmt.Printf("    RL  RR\n")
+		fmt.Printf("    %t  %t\n", irsdk.LRTireChange(), irsdk.RRTireChange())
+		fmt.Printf("    FuelFill:          %t\n", irsdk.FuelFill())
+		fmt.Printf("    WindshieldTearoff: %t\n", irsdk.WindshieldTearoff())
+		fmt.Printf("    FastRepair:        %t\n", irsdk.FastRepair())
+		fmt.Printf("    ClearTires:        %t\n", irsdk.ClearTires())
+		fmt.Printf("    ClearWS:           %t\n", irsdk.ClearWS())
+		fmt.Printf("    ClearFR:           %t\n", irsdk.ClearFR())
+		fmt.Printf("    ClearFuel:         %t\n", irsdk.ClearFuel())
+
+		// fmt.Printf("Vars:\n")
+		// for _, v := range irsdk.ListVariables() {
+		// 	fmt.Printf("%+v\n", v.Name)
+		// }
+		// os.Exit(0)
 
 		<-mainLoopTicker.C
 	}
