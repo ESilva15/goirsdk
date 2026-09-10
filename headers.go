@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-
-	"github.com/ESilva15/goirsdk/logger"
 )
 
 const (
@@ -32,8 +30,6 @@ type TelemetryHeaders struct {
 
 // readHeader will read the header out of the telemetry data
 func (i *IBT) readHeader() error {
-	log := logger.GetInstance()
-
 	var headerRaw [FileHeaderSize]byte
 	_, err := i.File.ReadAt(headerRaw[:], 0)
 	if err != nil {
@@ -48,7 +44,7 @@ func (i *IBT) readHeader() error {
 	if i.Opts.IBTExport {
 		err = i.exportIBT(headerRaw[:], 0)
 		if err != nil {
-			log.Printf("Failed to export headers: %v\n", err)
+			i.Opts.Logger.Debug("Failed to export headers", "err", err)
 		}
 	}
 

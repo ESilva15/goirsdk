@@ -155,12 +155,12 @@ func (i *IBT) checkEngineWarningsBitfield(field int) bool {
 		log.Fatal("no EngineWarnings")
 	}
 
-	bitfield, ok := val.Value.(int)
+	bitfield, ok := val.Value.(uint32)
 	if !ok {
-		log.Fatalf("unable to typecast EngineWarnings: %+v", val.Value)
+		log.Fatalf("unable to typecast EngineWarnings: %+v", val)
 	}
 
-	return bitfield&field != 0
+	return bitfield&uint32(field) != 0
 }
 
 func (i *IBT) WaterTempWarning() bool {

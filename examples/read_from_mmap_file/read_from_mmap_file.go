@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"log"
+	"log/slog"
+	"os"
 	"time"
 
 	"github.com/ESilva15/goirsdk"
@@ -13,8 +15,22 @@ func msToKph(v float32) int {
 }
 
 func main() {
+	output, err := os.OpenFile("./output.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o755)
+	if err != nil {
+		log.Fatalf("Failed to open log file: %+v", err)
+	}
+
+	logger := slog.New(
+		slog.NewTextHandler(output, &slog.HandlerOptions{
+			Level: slog.LevelDebug,
+		}),
+	)
+
+	logger.Debug("Starting test")
+
 	// Instantiate our iRacing SDK instance
 	irsdk, err := goirsdk.Init(goirsdk.Options{
+		Logger:     logger,
 		SourceType: goirsdk.SharedMemoryFile,
 	})
 	if err != nil {
@@ -53,9 +69,29 @@ func main() {
 		gear := int32(irsdk.Vars.Vars["Gear"].Value.(int))
 		rpm := int32(irsdk.Vars.Vars["RPM"].Value.(float32))
 		speed := int32(msToKph(irsdk.Vars.Vars["Speed"].Value.(float32)))
+		sessionState := irsdk.Vars.Vars["SessionState"].Value.(int)
+		trkloc := irsdk.Vars.Vars["PlayerTrackSurface"].Value.(int)
+		trksurf := irsdk.Vars.Vars["PlayerTrackSurfaceMaterial"].Value.(int)
+		pitsvflags := irsdk.Vars.Vars["PitSvFlags"].Value.(uint32)
 
 		fmt.Printf("\033[?25l\033[2J\033[H")
-		fmt.Printf("Gear: %d, RPM: %d, Speed: %d", gear, rpm, speed)
+		fmt.Printf("Gear: %d, RPM: %d, Speed: %d\n", gear, rpm, speed)
+		fmt.Printf("SessionState: %s\n", goirsdk.SessionStateToString(sessionState))
+		fmt.Printf("TrkLoc: %s\n", goirsdk.TrkLocToString(trkloc))
+		fmt.Printf("TrkSurf: %s\n", goirsdk.TrkSurfToString(trksurf))
+		fmt.Printf("PitSvFlags: %d\n", pitsvflags)
+		fmt.Printf("    FL  FR\n")
+		fmt.Printf("    %t  %t\n", irsdk.LFTireChange(), irsdk.RFTireChange())
+		fmt.Printf("\n")
+		fmt.Printf("    RL  RR\n")
+		fmt.Printf("    %t  %t\n", irsdk.LRTireChange(), irsdk.RRTireChange())
+		fmt.Printf("    FuelFill:          %t\n", irsdk.FuelFill())
+		fmt.Printf("    WindshieldTearoff: %t\n", irsdk.WindshieldTearoff())
+		fmt.Printf("    FastRepair:        %t\n", irsdk.FastRepair())
+		fmt.Printf("    ClearTires:        %t\n", irsdk.ClearTires())
+		fmt.Printf("    ClearWS:           %t\n", irsdk.ClearWS())
+		fmt.Printf("    ClearFR:           %t\n", irsdk.ClearFR())
+		fmt.Printf("    ClearFuel:         %t\n", irsdk.ClearFuel())
 
 		<-mainLoopTicker.C
 	}

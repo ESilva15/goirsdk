@@ -263,6 +263,10 @@ func (i *IBT) readData(buf []byte) error {
 		}
 		// --------------
 
+		if k == "SessionState" {
+			i.Opts.Logger.Debug(fmt.Sprintf("SessionState: %+v", v))
+		}
+
 		i.Vars.Vars[k] = v
 	}
 
@@ -273,7 +277,8 @@ func (i *IBT) readData(buf []byte) error {
 // live and offline data
 func (i *IBT) Update(timeout time.Duration) (IRacingState, error) {
 	// This is what happens if we are reading live data
-	if i.winUtils != nil {
+	switch i.Opts.SourceType {
+	case SharedMemoryFile:
 		// Put a way to check if the sim is active here
 		// fmt.Println("NOT CHECKING IF SIM IS ACTIVE - ADD ME")
 
@@ -313,17 +318,19 @@ func (i *IBT) Update(timeout time.Duration) (IRacingState, error) {
 
 		if i.Opts.IBTExport {
 			// Dirty attempt at getting this to work to write to a memory mapped file
+			var offset int64 = 0
 			switch i.Opts.IBTExportType {
 			case IBTFile:
-				err = i.exportIBT(buf, int64(i.Headers.BufOffset+i.Vars.RecorderTick*i.Headers.BufLen))
-				if err != nil {
-					log.Printf("Failed to export live telemetry data: %v", err)
-				}
+				i.Opts.Logger.Debug("Reading live data and exporting to IBT file")
+				offset = int64(i.Headers.BufOffset + i.Vars.RecorderTick*i.Headers.BufLen)
 			case SharedMemoryFile:
-				err = i.exportIBT(buf, int64(i.Headers.BufOffset))
-				if err != nil {
-					log.Printf("Failed to export live telemetry data: %v", err)
-				}
+				i.Opts.Logger.Debug("Reading live data and exporting to SHM file")
+				offset = int64(i.Headers.BufOffset)
+			}
+
+			err = i.exportIBT(buf, offset)
+			if err != nil {
+				i.Opts.Logger.Debug(fmt.Sprintf("Failed to export offline telemetry data: %+v", err))
 			}
 		}
 
@@ -338,7 +345,7 @@ func (i *IBT) Update(timeout time.Duration) (IRacingState, error) {
 
 		// Document why this is here, I don't remember the exact words right now
 		i.Vars.RecorderTick++
-	} else {
+	case IBTFile:
 		// This is what happens if we are reading from an .ibt file
 		// This will get the dataframe corresponding to a given tick
 		start := i.Headers.BufOffset + i.Vars.Tick*i.Headers.BufLen
@@ -349,17 +356,19 @@ func (i *IBT) Update(timeout time.Duration) (IRacingState, error) {
 		// writing to a file
 		if i.Opts.IBTExport {
 			// Dirty attempt at getting this to work to write to a memory mapped file
+			var offset int64 = 0
 			switch i.Opts.IBTExportType {
 			case IBTFile:
-				err = i.exportIBT(buf, int64(start))
-				if err != nil {
-					log.Printf("Failed to export offline telemetry data: %v", err)
-				}
+				i.Opts.Logger.Debug("Reading IBT file and exporting to IBT file")
+				offset = int64(start)
 			case SharedMemoryFile:
-				err = i.exportIBT(buf, int64(i.Headers.BufOffset))
-				if err != nil {
-					log.Printf("Failed to export live telemetry data: %v", err)
-				}
+				i.Opts.Logger.Debug("Reading IBT file and exporting to SHM file")
+				offset = int64(i.Headers.BufOffset)
+			}
+
+			err = i.exportIBT(buf, offset)
+			if err != nil {
+				i.Opts.Logger.Debug(fmt.Sprintf("Failed to export offline telemetry data: %+v", err))
 			}
 		}
 

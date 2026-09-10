@@ -4,9 +4,9 @@ package goirsdk
 import (
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 
-	"github.com/ESilva15/goirsdk/logger"
 	"github.com/ESilva15/goirsdk/mmaputils"
 	"github.com/ESilva15/goirsdk/sharedMem"
 	"gopkg.in/yaml.v3"
@@ -33,6 +33,7 @@ const (
 )
 
 type Options struct {
+	Logger                *slog.Logger
 	SourceType            TelemetryContainer // type of source data
 	SourcePath            string             // Path to source
 	IBTExportType         TelemetryContainer // export type of telemetry: store .ibt or replay in shm
@@ -75,11 +76,9 @@ func (i *IBT) IsConnected() bool {
 }
 
 func (i *IBT) exportYAML() error {
-	log := logger.GetInstance()
-
 	file, err := os.OpenFile(i.Opts.SessionInfoExportPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o644)
 	if err != nil {
-		log.Printf("Failed to open file for YAML export: %v\n", err)
+		i.Opts.Logger.Debug(fmt.Sprintf("Failed to open file for YAML export: %v\n", err))
 		return fmt.Errorf("failed to open output file for YAML: %v", err)
 	}
 	defer file.Close()
@@ -88,7 +87,7 @@ func (i *IBT) exportYAML() error {
 
 	err = enc.Encode(i.SessionInfo)
 	if err != nil {
-		log.Printf("Failed to write into file for YAML export: %v\n", err)
+		i.Opts.Logger.Debug(fmt.Sprintf("Failed to write into file for YAML export: %v\n", err))
 		return fmt.Errorf("failed to write YAML contents to file: %v", err)
 	}
 
@@ -96,13 +95,11 @@ func (i *IBT) exportYAML() error {
 }
 
 func (i *IBT) exportIBT(data []byte, offset int64) error {
-	log := logger.GetInstance()
-
 	_, err := i.IBTExporter.WriteAt(data, offset)
 	if err != nil {
 		i.IBTExporter.Close()
 		i.IBTExporter = nil
-		log.Println("Won't attempt to export anymore")
+		i.Opts.Logger.Debug(fmt.Sprintf("won't attempt to export anymore: %+v", err))
 		return err
 	}
 
@@ -177,8 +174,6 @@ func (i *IBT) openExporter() error {
 // Init serves to initialize and get a hold of a IBT struct
 // Receives an Options struct with the required configurations
 func Init(opts Options) (*IBT, error) {
-	// log := logger.GetInstance()
-
 	// Create our irsdk instance
 	var err error
 	ibt := IBT{
@@ -236,6 +231,10 @@ func (i *IBT) ListVariables() map[string]Var {
 
 // Close cleans up our irsdk instance
 func (i *IBT) Close() {
+	if i == nil {
+		return
+	}
+
 	if i.winUtils != nil {
 		// If its not live data, the user is the one with ownership of the handle
 		i.File.Close()

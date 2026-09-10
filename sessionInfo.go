@@ -6,8 +6,6 @@ import (
 	"log"
 	"strings"
 
-	"github.com/ESilva15/goirsdk/logger"
-
 	"golang.org/x/text/encoding/charmap"
 	"gopkg.in/yaml.v3"
 )
@@ -312,8 +310,6 @@ type Driver struct {
 
 // readSessionInfo will read the session info yaml out of the telemetry data
 func (i *IBT) readSessionInfo() error {
-	log := logger.GetInstance()
-
 	sessionInfoStringRaw := make([]byte, i.Headers.SessionInfoLength)
 	_, err := i.File.ReadAt(sessionInfoStringRaw, int64(i.Headers.SessionInfoOffset))
 	if err != nil {
@@ -337,7 +333,7 @@ func (i *IBT) readSessionInfo() error {
 	if i.Opts.SessionInfoExport {
 		err := i.exportYAML()
 		if err != nil {
-			log.Printf("Failed to export YAML string: %v\n", err)
+			i.Opts.Logger.Debug("Failed to export YAML string", "err", err)
 		}
 	}
 

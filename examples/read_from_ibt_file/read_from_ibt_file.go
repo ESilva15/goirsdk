@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"log"
+	"log/slog"
+	"os"
 	"time"
 
 	"github.com/ESilva15/goirsdk"
@@ -13,8 +15,20 @@ func msToKph(v float32) int {
 }
 
 func main() {
+	output, err := os.OpenFile("./output.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o755)
+	if err != nil {
+		log.Fatalf("Failed to open log file: %+v", err)
+	}
+
+	logger := slog.New(
+		slog.NewTextHandler(output, &slog.HandlerOptions{
+			Level: slog.LevelDebug,
+		}),
+	)
+
 	// Instantiate our iRacing SDK instance
 	irsdk, err := goirsdk.Init(goirsdk.Options{
+		Logger:        logger,
 		SourceType:    goirsdk.IBTFile,
 		SourcePath:    "../../../../testTelemetry/mx5_2016Okayama_full_2024_10_19_22_02_12.ibt",
 		IBTExportType: goirsdk.SharedMemoryFile,

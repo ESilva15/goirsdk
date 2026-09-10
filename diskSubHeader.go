@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-
-	"github.com/ESilva15/goirsdk/logger"
 )
 
 const (
@@ -23,8 +21,6 @@ type DiskSubHeader struct {
 
 // readSubheader will read the subheader contents out of the telemetry data
 func (i *IBT) readSubheader() error {
-	log := logger.GetInstance()
-
 	var subheaderRaw [SubHeaderSize]byte
 	_, err := i.File.ReadAt(subheaderRaw[:], HeaderSize)
 	if err != nil {
@@ -39,7 +35,7 @@ func (i *IBT) readSubheader() error {
 	if i.Opts.IBTExport {
 		err = i.exportIBT(subheaderRaw[:], HeaderSize)
 		if err != nil {
-			log.Printf("failed to export subheaders: %v\n", err)
+			i.Opts.Logger.Debug("failed to export disksubheader", "err", err)
 		}
 	}
 
@@ -50,8 +46,6 @@ func (i *IBT) readSubheader() error {
 // or nil if an error occurs. In which case the error return value is more
 // valuable
 func parseTelemetrySubHeader(buf [SubHeaderSize]byte) (*DiskSubHeader, error) {
-	// utils.HexDump(buf[:])
-
 	dst := DiskSubHeader{}
 	err := binary.Read(bytes.NewBuffer(buf[:]), binary.LittleEndian, &dst)
 	if err != nil {
