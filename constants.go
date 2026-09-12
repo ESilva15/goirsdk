@@ -12,13 +12,15 @@ type Msg struct {
 }
 
 const (
+	DATAVALIDEVENTNAME       string = "IRSDKDataValidEvent"
 	MEMMAPFILENAME                  = "IRSDKMemMapFileName"
 	SimStatusUrl             string = "http://127.0.0.1:32034/get_sim_status?object=simStatus"
-	IRSDK_DATAVALIDEVENTNAME string = "Local\\IRSDKDataValidEvent"
-	IRSDK_MEMMAPFILENAME     string = "Local\\" + MEMMAPFILENAME
-	IRSDK_BROADCASTMSGNAME   string = "IRSDK_BROADCASTMSG"
-	fileMapSize              uint32 = 1164 * 1024
-	connTimeout              int64  = 30
+	IRSDK_DATAVALIDEVENTNAME string = "Local\\" + DATAVALIDEVENTNAME
+	// IRSDK_DATAVALIDEVENTNAME string = DATAVALIDEVENTNAME
+	IRSDK_MEMMAPFILENAME   string = "Local\\" + MEMMAPFILENAME
+	IRSDK_BROADCASTMSGNAME string = "IRSDK_BROADCASTMSG"
+	fileMapSize            uint32 = 1164 * 1024
+	connTimeout            int64  = 30
 )
 
 const (

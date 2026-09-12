@@ -1,9 +1,11 @@
-// go:build windows
+//go:build windows
 
 package mmaputils
 
 import (
+	"fmt"
 	"sync"
+	"syscall"
 	"time"
 	"unsafe"
 
@@ -55,9 +57,14 @@ func (u *utils) OpenEvent(eventName string) error {
 		return err
 	}
 
-	event, err := windows.OpenEvent(windows.SYNCHRONIZE, false, name)
+	// Request EVENT_MODIFY_STATE so SetEvent can be called on this handle
+	event, err := windows.OpenEvent(windows.SYNCHRONIZE|windows.EVENT_MODIFY_STATE, false, name)
 	if err != nil {
-		return err
+		// If event does not exist yet, create it
+		event, err = windows.CreateEvent(nil, 0, 0, name)
+		if err != nil {
+			return err
+		}
 	}
 	u.wEvent = event
 
@@ -85,6 +92,33 @@ func (u *utils) OpenBroadcastChannel(name string) error {
 	u.wBroadcastChn = ret
 
 	return nil
+}
+
+func (u *utils) SignalEvent() error {
+	if u.wEvent != 0 {
+		err := windows.SetEvent(u.wEvent)
+		if err != nil {
+			return fmt.Errorf("failed to signal Win32 event: %+v", err)
+		}
+	}
+
+	return nil
+}
+
+func signalEvent(name string) {
+	cName, err := syscall.UTF16PtrFromString(name)
+	if err != nil {
+		return
+	}
+	h, err := windows.OpenEvent(windows.EVENT_MODIFY_STATE, false, cName)
+	if err == nil {
+		windows.SetEvent(h)
+		windows.CloseHandle(h)
+	}
+}
+
+func cleanupEvent(name string) {
+	// Win32 events clean up automatically when handles close
 }
 
 // INITIALIZATION

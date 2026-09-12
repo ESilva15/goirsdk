@@ -261,11 +261,6 @@ func (i *IBT) readData(buf []byte) error {
 				v.Value = math.Float64frombits(uint64(binary.LittleEndian.Uint64(rbuf)))
 			}
 		}
-		// --------------
-
-		if k == "SessionState" {
-			i.Opts.Logger.Debug(fmt.Sprintf("SessionState: %+v", v))
-		}
 
 		i.Vars.Vars[k] = v
 	}
@@ -312,6 +307,10 @@ func (i *IBT) Update(timeout time.Duration) (IRacingState, error) {
 		buf := make([]byte, i.Headers.BufLen)
 
 		_, err := i.File.ReadAt(buf, int64(start))
+		if err == io.EOF {
+			return Ended, nil
+		}
+
 		if err != nil {
 			return Failed, err
 		}
@@ -321,10 +320,10 @@ func (i *IBT) Update(timeout time.Duration) (IRacingState, error) {
 			var offset int64 = 0
 			switch i.Opts.IBTExportType {
 			case IBTFile:
-				i.Opts.Logger.Debug("Reading live data and exporting to IBT file")
+				// i.Opts.Logger.Debug("Reading live data and exporting to IBT file")
 				offset = int64(i.Headers.BufOffset + i.Vars.RecorderTick*i.Headers.BufLen)
 			case SharedMemoryFile:
-				i.Opts.Logger.Debug("Reading live data and exporting to SHM file")
+				// i.Opts.Logger.Debug("Reading live data and exporting to SHM file")
 				offset = int64(i.Headers.BufOffset)
 			}
 
@@ -339,10 +338,6 @@ func (i *IBT) Update(timeout time.Duration) (IRacingState, error) {
 			return Unknown, err
 		}
 
-		if err == io.EOF {
-			return Ended, nil
-		}
-
 		// Document why this is here, I don't remember the exact words right now
 		i.Vars.RecorderTick++
 	case IBTFile:
@@ -352,6 +347,13 @@ func (i *IBT) Update(timeout time.Duration) (IRacingState, error) {
 		buf := make([]byte, i.Headers.BufLen)
 		_, err := i.File.ReadAt(buf, int64(start))
 
+		if err == io.EOF {
+			return Ended, nil
+		}
+		if err != nil {
+			return Unknown, err
+		}
+
 		// Make this happen in a different thread, or have this send to a queue that has a thread
 		// writing to a file
 		if i.Opts.IBTExport {
@@ -359,10 +361,10 @@ func (i *IBT) Update(timeout time.Duration) (IRacingState, error) {
 			var offset int64 = 0
 			switch i.Opts.IBTExportType {
 			case IBTFile:
-				i.Opts.Logger.Debug("Reading IBT file and exporting to IBT file")
+				// i.Opts.Logger.Debug("Reading IBT file and exporting to IBT file")
 				offset = int64(start)
 			case SharedMemoryFile:
-				i.Opts.Logger.Debug("Reading IBT file and exporting to SHM file")
+				// i.Opts.Logger.Debug("Reading IBT file and exporting to SHM file")
 				offset = int64(i.Headers.BufOffset)
 			}
 
@@ -370,13 +372,6 @@ func (i *IBT) Update(timeout time.Duration) (IRacingState, error) {
 			if err != nil {
 				i.Opts.Logger.Debug(fmt.Sprintf("Failed to export offline telemetry data: %+v", err))
 			}
-		}
-
-		if err == io.EOF {
-			return Ended, nil
-		}
-		if err != nil {
-			return Unknown, err
 		}
 
 		err = i.readData(buf)

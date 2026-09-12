@@ -7,7 +7,7 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/ESilva15/goirsdk/mmaputils"
+	eventutils "github.com/ESilva15/goirsdk/eventutils"
 	"github.com/ESilva15/goirsdk/sharedMem"
 	"gopkg.in/yaml.v3"
 )
@@ -48,7 +48,7 @@ type IBT struct {
 	File        Reader // Source of the data
 	Opts        Options
 	IBTExporter Writer
-	winUtils    *mmaputils.IRacingWinUtils // WinUtils gives access to the system utilities
+	winUtils    *eventutils.EventUtils // WinUtils gives access to the system utilities
 
 	// TODO: fragment this struct a little bit, for now I want to actually get
 	// stuff done so its enough to work as is
@@ -95,12 +95,22 @@ func (i *IBT) exportYAML() error {
 }
 
 func (i *IBT) exportIBT(data []byte, offset int64) error {
-	_, err := i.IBTExporter.WriteAt(data, offset)
+	nBytes, err := i.IBTExporter.WriteAt(data, offset)
 	if err != nil {
 		i.IBTExporter.Close()
 		i.IBTExporter = nil
 		i.Opts.Logger.Debug(fmt.Sprintf("won't attempt to export anymore: %+v", err))
 		return err
+	}
+
+	if nBytes > 0 {
+		// Send the event stating the data has been created
+		err = i.winUtils.Utils.SignalEvent()
+		if err != nil {
+			i.Opts.Logger.Debug("failed to signal event", "err", err)
+		} else {
+			i.Opts.Logger.Debug("no error signaling: ", "nBytes", nBytes)
+		}
 	}
 
 	return nil
@@ -112,7 +122,7 @@ func (i *IBT) openSource() error {
 	switch i.Opts.SourceType {
 	case SharedMemoryFile:
 		// User is requesting us to read live data - present in the mem map file
-		i.File, err = mmaputils.OpenMemMap(MEMMAPFILENAME, fileMapSize)
+		i.File, err = eventutils.OpenMemMap(MEMMAPFILENAME, fileMapSize)
 		if err != nil {
 			return fmt.Errorf("failed to open memory mapped file: %+v", err)
 		}
@@ -120,7 +130,7 @@ func (i *IBT) openSource() error {
 		// To use our windows interface we need to initialize it first
 		// it will return a struct with a pointer to the windows handles
 		// if, for some reason, we need to stub out this to run in on Linux its easier
-		i.winUtils, err = mmaputils.Init()
+		i.winUtils, err = eventutils.Init()
 		if err != nil {
 			return err
 		}
@@ -177,10 +187,17 @@ func Init(opts Options) (*IBT, error) {
 	// Create our irsdk instance
 	var err error
 	ibt := IBT{
-		Opts:     opts,
-		Vars:     &TelemetryVars{},
-		winUtils: nil,
+		Opts: opts,
+		Vars: &TelemetryVars{},
 	}
+
+	// Set up the event utils
+	evutils, err := eventutils.Init()
+	if err != nil {
+		return nil, err
+	}
+	evutils.OpenEvent(IRSDK_DATAVALIDEVENTNAME)
+	ibt.winUtils = evutils
 
 	// Setup the source
 	err = ibt.openSource()
@@ -219,7 +236,7 @@ func Init(opts Options) (*IBT, error) {
 	// Read the telemetry vars info
 	err = ibt.readVariablerHeaders()
 	if err != nil {
-		return nil, fmt.Errorf("Unable to parser variable headers from file: %v", err)
+		return nil, fmt.Errorf("unable to parser variable headers from file: %v", err)
 	}
 
 	return &ibt, nil
@@ -241,3 +258,7 @@ func (i *IBT) Close() {
 		i.winUtils.Close()
 	}
 }
+
+// LastTick returns the last tick
+// func (i *IBT) LastTick() int {
+// }
