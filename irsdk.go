@@ -6,6 +6,7 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"time"
 
 	eventutils "github.com/ESilva15/goirsdk/eventutils"
 	"github.com/ESilva15/goirsdk/sharedMem"
@@ -109,7 +110,7 @@ func (i *IBT) exportIBT(data []byte, offset int64) error {
 		if err != nil {
 			i.Opts.Logger.Debug("failed to signal event", "err", err)
 		} else {
-			i.Opts.Logger.Debug("no error signaling: ", "nBytes", nBytes)
+			i.Opts.Logger.Debug("no error signaling", "nBytes", nBytes)
 		}
 	}
 
@@ -130,10 +131,10 @@ func (i *IBT) openSource() error {
 		// To use our windows interface we need to initialize it first
 		// it will return a struct with a pointer to the windows handles
 		// if, for some reason, we need to stub out this to run in on Linux its easier
-		i.winUtils, err = eventutils.Init()
-		if err != nil {
-			return err
-		}
+		// i.winUtils, err = eventutils.Init()
+		// if err != nil {
+		// 	return err
+		// }
 
 		// I don't believe we need this on windows either, but I'll have to check
 		// We need to open the windows event thing
@@ -196,7 +197,10 @@ func Init(opts Options) (*IBT, error) {
 	if err != nil {
 		return nil, err
 	}
-	evutils.OpenEvent(IRSDK_DATAVALIDEVENTNAME)
+	err = evutils.OpenEvent(IRSDK_DATAVALIDEVENTNAME)
+	if err != nil {
+		return nil, err
+	}
 	ibt.winUtils = evutils
 
 	// Setup the source
@@ -246,6 +250,16 @@ func (i *IBT) ListVariables() map[string]Var {
 	return i.Vars.Vars
 }
 
+// CheckForDataEvent
+// timeout is in ms
+func (i *IBT) CheckForDataEvent(timeout time.Duration) bool {
+	if i.winUtils.CheckValidDataEvent(timeout) {
+		return true
+	}
+
+	return false
+}
+
 // Close cleans up our irsdk instance
 func (i *IBT) Close() {
 	if i == nil {
@@ -258,7 +272,3 @@ func (i *IBT) Close() {
 		i.winUtils.Close()
 	}
 }
-
-// LastTick returns the last tick
-// func (i *IBT) LastTick() int {
-// }
