@@ -29,6 +29,9 @@ static inline int timed_wait_posix_semaphore(void* sem_ptr, long timeout_ms) {
     }
     sem_t* sem = (sem_t*)sem_ptr;
 
+		// Drain the semaphore
+		while (sem_trywait(sem) == 0) {}
+
     struct timespec ts;
     clock_gettime(CLOCK_REALTIME, &ts);
 
@@ -63,7 +66,7 @@ static inline int signal_posix_semaphore(const char* name) {
 
 static inline int post_posix_semaphore(void* sem_ptr) {
 	if (sem_ptr != NULL) {
-		sem_post((sem_t*)sem_ptr);
+		return sem_post((sem_t*)sem_ptr);
 	}
 	return -1;
 }
