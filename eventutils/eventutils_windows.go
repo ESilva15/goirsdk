@@ -52,21 +52,32 @@ func OpenMemMap(name string, size uint32) (Reader, error) {
 
 // openEvent opens a windows.Handle for a given event
 func (u *utils) OpenEvent(eventName string) error {
-	name, err := windows.UTF16PtrFromString(eventName)
+	namePtr, err := windows.UTF16PtrFromString(eventName)
 	if err != nil {
 		return err
 	}
 
-	// Request EVENT_MODIFY_STATE so SetEvent can be called on this handle
-	event, err := windows.OpenEvent(windows.SYNCHRONIZE|windows.EVENT_MODIFY_STATE, false, name)
+	eventHandle, err := windows.OpenEvent(windows.SYNCHRONIZE, false, namePtr)
 	if err != nil {
-		// If event does not exist yet, create it
-		event, err = windows.CreateEvent(nil, 0, 0, name)
-		if err != nil {
-			return err
-		}
+		return err
 	}
-	u.wEvent = event
+
+	u.wEvent = eventHandle
+	// name, err := windows.UTF16PtrFromString(eventName)
+	// if err != nil {
+	// 	return err
+	// }
+
+	// // Request EVENT_MODIFY_STATE so SetEvent can be called on this handle
+	// event, err := windows.OpenEvent(windows.SYNCHRONIZE|windows.EVENT_MODIFY_STATE, false, name)
+	// if err != nil {
+	// 	// If event does not exist yet, create it
+	// 	event, err = windows.CreateEvent(nil, 0, 0, name)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// }
+	// u.wEvent = event
 
 	return nil
 }
@@ -143,13 +154,14 @@ func (u *utils) CheckValidDataEvent(timeout time.Duration) bool {
 	}
 
 	// Check the result of the wait
-	if result == WAIT_OBJECT_0 {
-		return true
-	} else if result == WAIT_TIMEOUT {
-		return false
-	}
+	return result == WAIT_OBJECT_0
+	// if result == WAIT_OBJECT_0 {
+	// 	return true
+	// } else if result == WAIT_TIMEOUT {
+	// 	return false
+	// }
 
-	return false
+	// return false
 }
 
 // SendBroadcastMessage sends a message trough the broadcast channel
