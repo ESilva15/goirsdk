@@ -6,8 +6,14 @@ package sharedMem
 import (
 	"io"
 	"log"
+	"unsafe"
 
 	"golang.org/x/sys/windows"
+)
+
+var (
+	modkernel32          = windows.NewLazySystemDLL("kernel32.dll")
+	procOpenFileMappingW = modkernel32.NewProc("OpenFileMappingW")
 )
 
 type shmi struct {
@@ -45,9 +51,46 @@ func create(name string, size uint32) (*shmi, error) {
 	return &shmi{h, addr, size}, nil
 }
 
+func openFileMapping(desidredAccess uint32, inheritHandle bool, name *uint16) (windows.Handle, error) {
+	var inherit uint32
+	if inheritHandle {
+		inherit = 1
+	}
+
+	r1, _, err := procOpenFileMappingW.Call(
+		uintptr(desidredAccess),
+		uintptr(inherit),
+		uintptr(unsafe.Pointer(name)),
+	)
+	if r1 == 0 {
+		return 0, err
+	}
+
+	return windows.Handle(r1), nil
+}
+
 // open shared memory. return shmi object.
 func open(name string, size uint32) (*shmi, error) {
-	return create(name, size)
+	fnPtr, err := windows.UTF16PtrFromString(name)
+	if err != nil {
+		return nil, err
+	}
+
+	memHandle, err := openFileMapping(windows.FILE_MAP_READ, false, fnPtr)
+	if err != nil {
+		return nil, err
+	}
+
+	memAddr, err := windows.MapViewOfFile(memHandle, windows.FILE_MAP_READ, 0, 0, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	return &shmi{
+		h:    memHandle,
+		v:    memAddr,
+		size: size,
+	}, nil
 }
 
 func (o *shmi) close() error {
